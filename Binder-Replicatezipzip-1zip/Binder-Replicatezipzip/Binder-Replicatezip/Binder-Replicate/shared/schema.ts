@@ -137,6 +137,38 @@ export const shotList = pgTable("shot_list", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const locations = pgTable("locations", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  name: text("name").notNull(),
+  address: text("address"),
+  description: text("description"),
+  coordinates: text("coordinates"), // JSON: {lat, lng}
+  permissions: text("permissions"), // Filming permit status
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const locationGallery = pgTable("location_gallery", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(),
+  imageUrl: text("image_url").notNull(),
+  caption: text("caption"),
+  uploadedBy: text("uploaded_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const documentVersions = pgTable("document_versions", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull(),
+  version: integer("version").notNull(),
+  content: text("content").notNull(),
+  changesSummary: text("changes_summary"),
+  editedBy: text("edited_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // === SCHEMAS ===
 
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true });
@@ -151,6 +183,9 @@ export const insertEquipmentAssignmentSchema = createInsertSchema(equipmentAssig
 export const insertBudgetSchema = createInsertSchema(budgets).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertBudgetLineItemSchema = createInsertSchema(budgetLineItems).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertShotListSchema = createInsertSchema(shotList).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertLocationSchema = createInsertSchema(locations).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertLocationGallerySchema = createInsertSchema(locationGallery).omit({ id: true, createdAt: true });
+export const insertDocumentVersionSchema = createInsertSchema(documentVersions).omit({ id: true, createdAt: true });
 
 // === TYPES ===
 
@@ -189,3 +224,12 @@ export type InsertBudgetLineItem = z.infer<typeof insertBudgetLineItemSchema>;
 
 export type ShotList = typeof shotList.$inferSelect;
 export type InsertShotList = z.infer<typeof insertShotListSchema>;
+
+export type Location = typeof locations.$inferSelect;
+export type InsertLocation = z.infer<typeof insertLocationSchema>;
+
+export type LocationGallery = typeof locationGallery.$inferSelect;
+export type InsertLocationGallery = z.infer<typeof insertLocationGallerySchema>;
+
+export type DocumentVersion = typeof documentVersions.$inferSelect;
+export type InsertDocumentVersion = z.infer<typeof insertDocumentVersionSchema>;

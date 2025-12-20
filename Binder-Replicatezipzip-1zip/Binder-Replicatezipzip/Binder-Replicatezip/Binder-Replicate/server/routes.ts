@@ -647,5 +647,85 @@ Return only JSON array of IDs by relevance: [1,3,5]`
     }
   });
 
+  // === Locations ===
+  app.get(api.locations.list.path, async (req, res) => {
+    const locations = await storage.getLocations(Number(req.params.projectId));
+    res.json(locations);
+  });
+
+  app.post(api.locations.create.path, async (req, res) => {
+    try {
+      const input = api.locations.create.input.parse(req.body);
+      const location = await storage.createLocation({
+        ...input,
+        projectId: Number(req.params.projectId)
+      });
+      res.status(201).json(location);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.locations.delete.path, async (req, res) => {
+    await storage.deleteLocation(Number(req.params.id));
+    res.sendStatus(204);
+  });
+
+  // === Location Gallery ===
+  app.get(api.locationGallery.list.path, async (req, res) => {
+    const gallery = await storage.getLocationGallery(Number(req.params.locationId));
+    res.json(gallery);
+  });
+
+  app.post(api.locationGallery.addImage.path, async (req, res) => {
+    try {
+      const input = api.locationGallery.addImage.input.parse(req.body);
+      const image = await storage.addGalleryImage({
+        ...input,
+        locationId: Number(req.params.locationId)
+      });
+      res.status(201).json(image);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  // === Document Versions ===
+  app.get(api.documentVersions.list.path, async (req, res) => {
+    const versions = await storage.getDocumentVersions(Number(req.params.documentId));
+    res.json(versions);
+  });
+
+  app.post(api.documentVersions.create.path, async (req, res) => {
+    try {
+      const input = api.documentVersions.create.input.parse(req.body);
+      const version = await storage.createDocumentVersion({
+        ...input,
+        documentId: Number(req.params.documentId)
+      });
+      res.status(201).json(version);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.post(api.documentVersions.restore.path, async (req, res) => {
+    try {
+      const document = await storage.restoreDocumentVersion(Number(req.params.documentId), Number(req.params.versionId));
+      res.json(document);
+    } catch (err) {
+      res.status(404).json({ message: "Version not found" });
+    }
+  });
+
   return httpServer;
 }

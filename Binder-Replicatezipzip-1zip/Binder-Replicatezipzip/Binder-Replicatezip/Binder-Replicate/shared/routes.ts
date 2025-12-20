@@ -6,7 +6,10 @@ import {
   insertEventSchema, events,
   insertUserSettingsSchema,
   insertCrewSchema, crew,
-  insertCrewAssignmentSchema, crewAssignments
+  insertCrewAssignmentSchema, crewAssignments,
+  insertLocationSchema, locations,
+  insertLocationGallerySchema,
+  insertDocumentVersionSchema
 } from './schema';
 
 // ============================================
@@ -307,6 +310,84 @@ export const api = {
           })),
         }),
         400: errorSchemas.validation,
+      },
+    },
+  },
+  locations: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/projects/:projectId/locations',
+      responses: {
+        200: z.array(z.custom<typeof locations.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/projects/:projectId/locations',
+      input: insertLocationSchema,
+      responses: {
+        201: z.custom<typeof locations.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/locations/:id',
+      responses: {
+        200: z.custom<typeof locations.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/locations/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+  locationGallery: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/locations/:locationId/gallery',
+      responses: {
+        200: z.array(z.custom<any>()),
+      },
+    },
+    addImage: {
+      method: 'POST' as const,
+      path: '/api/locations/:locationId/gallery',
+      input: insertLocationGallerySchema,
+      responses: {
+        201: z.custom<any>(),
+        400: errorSchemas.validation,
+      },
+    },
+  },
+  documentVersions: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/documents/:documentId/versions',
+      responses: {
+        200: z.array(z.custom<any>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/documents/:documentId/versions',
+      input: insertDocumentVersionSchema,
+      responses: {
+        201: z.custom<any>(),
+        400: errorSchemas.validation,
+      },
+    },
+    restore: {
+      method: 'POST' as const,
+      path: '/api/documents/:documentId/versions/:versionId/restore',
+      responses: {
+        200: z.custom<typeof documents.$inferSelect>(),
+        404: errorSchemas.notFound,
       },
     },
   },

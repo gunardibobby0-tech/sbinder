@@ -1,5 +1,5 @@
 import { 
-  users, projects, documents, contacts, events, userSettings, crew, crewAssignments, equipment, equipmentAssignments, budgets, budgetLineItems, shotList,
+  users, projects, documents, contacts, events, userSettings, crew, crewAssignments, equipment, equipmentAssignments, budgets, budgetLineItems, shotList, locations, locationGallery, documentVersions,
   type User,
   type Project, type InsertProject,
   type Document, type InsertDocument,
@@ -12,7 +12,10 @@ import {
   type EquipmentAssignment, type InsertEquipmentAssignment,
   type Budget, type InsertBudget,
   type BudgetLineItem, type InsertBudgetLineItem,
-  type ShotList, type InsertShotList
+  type ShotList, type InsertShotList,
+  type Location, type InsertLocation,
+  type LocationGallery, type InsertLocationGallery,
+  type DocumentVersion, type InsertDocumentVersion
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray } from "drizzle-orm";
@@ -88,6 +91,23 @@ export interface IStorage {
 
   // Crew Conflict Detection
   detectCrewConflicts(crewId: number, eventId: number): Promise<{ hasConflict: boolean; conflicts: Array<{ eventId: number; eventTitle: string; startTime: Date; endTime: Date }> }>;
+
+  // Locations
+  getLocations(projectId: number): Promise<Location[]>;
+  getLocation(id: number): Promise<Location | undefined>;
+  createLocation(location: InsertLocation): Promise<Location>;
+  updateLocation(id: number, updates: Partial<InsertLocation>): Promise<Location>;
+  deleteLocation(id: number): Promise<void>;
+
+  // Location Gallery
+  getLocationGallery(locationId: number): Promise<LocationGallery[]>;
+  addGalleryImage(image: InsertLocationGallery): Promise<LocationGallery>;
+  deleteGalleryImage(id: number): Promise<void>;
+
+  // Document Versions
+  getDocumentVersions(documentId: number): Promise<DocumentVersion[]>;
+  createDocumentVersion(version: InsertDocumentVersion): Promise<DocumentVersion>;
+  restoreDocumentVersion(documentId: number, versionId: number): Promise<Document>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -372,6 +392,62 @@ export class DatabaseStorage implements IStorage {
         endTime: c.endTime
       }))
     };
+  }
+
+  // Locations
+  async getLocations(projectId: number): Promise<Location[]> {
+    return await db.select().from(locations).where(eq(locations.projectId, projectId)).orderBy(desc(locations.createdAt));
+  }
+
+  async getLocation(id: number): Promise<Location | undefined> {
+    const [location] = await db.select().from(locations).where(eq(locations.id, id));
+    return location;
+  }
+
+  async createLocation(location: InsertLocation): Promise<Location> {
+    const [newLocation] = await db.insert(locations).values(location).returning();
+    return newLocation;
+  }
+
+  async updateLocation(id: number, updates: Partial<InsertLocation>): Promise<Location> {
+    const [updated] = await db.update(locations).set({ ...updates, updatedAt: new Date() }).where(eq(locations.id, id)).returning();
+    return updated;
+  }
+
+  async deleteLocation(id: number): Promise<void> {
+    await db.delete(locations).where(eq(locations.id, id));
+  }
+
+  // Location Gallery
+  async getLocationGallery(locationId: number): Promise<LocationGallery[]> {
+    return await db.select().from(locationGallery).where(eq(locationGallery.locationId, locationId)).orderBy(desc(locationGallery.createdAt));
+  }
+
+  async addGalleryImage(image: InsertLocationGallery): Promise<LocationGallery> {
+    const [newImage] = await db.insert(locationGallery).values(image).returning();
+    return newImage;
+  }
+
+  async deleteGalleryImage(id: number): Promise<void> {
+    await db.delete(locationGallery).where(eq(locationGallery.id, id));
+  }
+
+  // Document Versions
+  async getDocumentVersions(documentId: number): Promise<DocumentVersion[]> {
+    return await db.select().from(documentVersions).where(eq(documentVersions.documentId, documentId)).orderBy(desc(documentVersions.version));
+  }
+
+  async createDocumentVersion(version: InsertDocumentVersion): Promise<DocumentVersion> {
+    const [newVersion] = await db.insert(documentVersions).values(version).returning();
+    return newVersion;
+  }
+
+  async restoreDocumentVersion(documentId: number, versionId: number): Promise<Document> {
+    const versionRecord = await db.select().from(documentVersions).where(eq(documentVersions.id, versionId));
+    if (!versionRecord.length) throw new Error("Version not found");
+    
+    const [updated] = await db.update(documents).set({ content: versionRecord[0].content }).where(eq(documents.id, documentId)).returning();
+    return updated;
   }
 }
 
