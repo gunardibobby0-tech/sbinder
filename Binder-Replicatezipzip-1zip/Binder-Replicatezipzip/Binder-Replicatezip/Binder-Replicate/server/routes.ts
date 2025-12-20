@@ -267,7 +267,7 @@ export async function registerRoutes(
     }
   });
 
-  // === Auto-Suggest Cast Only from Script ===
+  // === Auto-Suggest Cast and Crew from Script ===
   app.post("/api/projects/:projectId/auto-suggest", async (req, res) => {
     try {
       const { scriptContent, model } = req.body;
@@ -289,10 +289,11 @@ export async function registerRoutes(
       const existingContacts = await storage.getContacts(projectId);
       const existingNames = new Set(existingContacts.map(c => c.name.toLowerCase()));
 
-      // Filter out duplicates - CAST ONLY
+      // Filter out duplicates
       const newCast = suggestions.cast.filter(c => !existingNames.has(c.name.toLowerCase()));
+      const newCrew = suggestions.crew.filter(c => !existingNames.has(c.name.toLowerCase()));
 
-      // Create CAST contacts only (no crew)
+      // Create CAST contacts
       const createdCast = await Promise.all(
         newCast.map(c =>
           storage.createContact({
@@ -300,6 +301,18 @@ export async function registerRoutes(
             name: c.name,
             role: c.role,
             category: "Cast"
+          })
+        )
+      );
+
+      // Create CREW contacts
+      const createdCrew = await Promise.all(
+        newCrew.map(c =>
+          storage.createContact({
+            projectId,
+            name: c.name,
+            role: c.role,
+            category: "Crew"
           })
         )
       );
@@ -323,11 +336,11 @@ export async function registerRoutes(
 
       res.json({
         cast: createdCast,
-        crew: [],
+        crew: createdCrew,
         events: createdEvents,
         duplicatesSkipped: {
           cast: suggestions.cast.length - newCast.length,
-          crew: 0
+          crew: suggestions.crew.length - newCrew.length
         }
       });
     } catch (err) {

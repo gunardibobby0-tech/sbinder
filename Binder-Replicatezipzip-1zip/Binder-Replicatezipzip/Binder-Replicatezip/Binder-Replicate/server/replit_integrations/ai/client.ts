@@ -117,15 +117,20 @@ export async function extractScriptData(
   crew: Array<{ name: string; role: string }>;
   schedule: Array<{ title: string; description: string; duration: number }>;
 }> {
-  const prompt = `You are a professional film and TV production expert. Your task is to analyze a screenplay, script, or production document and extract key production data.
+  const prompt = `You are a professional film and TV production expert. Your task is to analyze a screenplay, script, or production document and extract key production data including suggested crew positions.
 
 DOCUMENT TO ANALYZE:
 ${documentContent}
 
 EXTRACTION INSTRUCTIONS:
 1. Extract the main script content (narrative, dialogue, scene descriptions)
-2. Identify all cast members (characters/actors with their roles) - CAST ONLY, NO CREW
-3. Extract production schedule events with realistic durations
+2. Identify all cast members (characters/actors with their roles)
+3. Suggest essential crew positions based on the event type and production needs:
+   - For dramatic/narrative content: Director, Director of Photography, Sound Designer, Production Designer
+   - For interviews: Producer, Sound Technician, Lighting Technician
+   - For documentaries: Producer, Camera Operator, Sound Mixer, Editor
+   - Always include: 1st Assistant Director, Production Manager
+4. Extract production schedule events with realistic durations
 
 EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
 {
@@ -136,7 +141,12 @@ EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
       "role": "Character role (e.g., 'Lead', 'Detective', 'Female Lead') or Actor character"
     }
   ],
-  "crew": [],
+  "crew": [
+    {
+      "name": "Job title (e.g., 'Director', 'Cinematographer', 'Sound Mixer')",
+      "role": "Description of responsibilities"
+    }
+  ],
   "schedule": [
     {
       "title": "Event or shooting day title (e.g., 'Day 1: Interior Scenes', 'Location Scout')",
@@ -148,14 +158,15 @@ EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
 
 IMPORTANT RULES:
 - Return ONLY the JSON object, no additional text, markdown, or explanations
-- CAST ONLY: Extract only cast/characters. Do NOT extract crew members.
-- crew field should ALWAYS be empty array []
+- Include both cast and crew in suggestions based on production type
+- crew field should contain 3-6 essential crew positions based on the production needs
 - All other fields are required. If information is not found, use appropriate defaults:
   - scriptContent: empty string ""
-  - cast: empty array []
-  - crew: empty array [] (ALWAYS)
-  - schedule: empty array []
+  - cast: empty array [] if no cast found
+  - crew: array of 3-6 suggested crew positions (never empty if production type is clear)
+  - schedule: empty array [] if no schedule found
 - For cast, include complete names and clear role descriptions
+- For crew, use actual job titles (Director, DP, Sound Mixer, etc.) not placeholder names
 - Duration should be in minutes (480 = 8 hours for a typical shooting day)
 - Ensure the JSON is valid and properly formatted
 - Extract as much detail as possible from the provided document`;
