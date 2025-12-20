@@ -108,6 +108,14 @@ export interface IStorage {
   getDocumentVersions(documentId: number): Promise<DocumentVersion[]>;
   createDocumentVersion(version: InsertDocumentVersion): Promise<DocumentVersion>;
   restoreDocumentVersion(documentId: number, versionId: number): Promise<Document>;
+
+  // Budget Auto-calculation
+  calculateProjectBudget(projectId: number): Promise<{ 
+    crewCosts: number; 
+    equipmentCosts: number; 
+    totalEstimated: number;
+    breakdown: { crew: string; equipment: string };
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -448,6 +456,47 @@ export class DatabaseStorage implements IStorage {
     
     const [updated] = await db.update(documents).set({ content: versionRecord[0].content }).where(eq(documents.id, documentId)).returning();
     return updated;
+  }
+
+  // Budget Auto-calculation
+  async calculateProjectBudget(projectId: number): Promise<{ 
+    crewCosts: number; 
+    equipmentCosts: number; 
+    totalEstimated: number;
+    breakdown: { crew: string; equipment: string };
+  }> {
+    const crewList = await db.select().from(crew).where(eq(crew.projectId, projectId));
+    const equipmentList = await db.select().from(equipment).where(eq(equipment.projectId, projectId));
+
+    let crewCosts = 0;
+    let equipmentCosts = 0;
+
+    crewList.forEach(c => {
+      if (c.pricing) {
+        const price = parseInt(c.pricing.replace(/[^0-9]/g, '')) || 0;
+        crewCosts += price;
+      }
+    });
+
+    equipmentList.forEach(e => {
+      if (e.rentalCost) {
+        const cost = parseInt(e.rentalCost.replace(/[^0-9]/g, '')) || 0;
+        const qty = e.quantity || 1;
+        equipmentCosts += cost * qty;
+      }
+    });
+
+    const totalEstimated = crewCosts + equipmentCosts;
+
+    return {
+      crewCosts,
+      equipmentCosts,
+      totalEstimated,
+      breakdown: {
+        crew: `${crewList.length} crew members @ avg pricing`,
+        equipment: `${equipmentList.length} equipment items @ rental rates`,
+      },
+    };
   }
 }
 

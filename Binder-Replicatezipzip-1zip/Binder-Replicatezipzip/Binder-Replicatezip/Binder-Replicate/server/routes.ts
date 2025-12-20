@@ -727,5 +727,15 @@ Return only JSON array of IDs by relevance: [1,3,5]`
     }
   });
 
+  // === Budget Auto-calculation ===
+  app.post("/api/projects/:projectId/budget/auto-calculate", async (req, res) => {
+    try {
+      const calculation = await storage.calculateProjectBudget(Number(req.params.projectId));
+      res.json(calculation);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to calculate budget" });
+    }
+  });
+
   return httpServer;
 }
