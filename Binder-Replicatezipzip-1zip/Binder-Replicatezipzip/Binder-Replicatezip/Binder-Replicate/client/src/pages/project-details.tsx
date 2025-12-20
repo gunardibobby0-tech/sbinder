@@ -3,11 +3,12 @@ import { useRoute, useLocation } from "wouter";
 import { LayoutShell } from "@/components/layout-shell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, FileText, Users, CalendarDays, Settings, DollarSign } from "lucide-react";
+import { Loader2, ArrowLeft, FileText, Users, CalendarDays, Settings, DollarSign, BarChart3 } from "lucide-react";
 import ScriptView from "./project-views/script-view";
 import ContactsView from "./project-views/contacts-view";
 import ScheduleView from "./project-views/schedule-view";
 import BudgetView from "./project-views/budget-view";
+import TimelineView from "./project-views/timeline-view";
 
 export default function ProjectDetails() {
   const [match, params] = useRoute("/project/:id");
@@ -86,6 +87,13 @@ export default function ProjectDetails() {
                 Schedule
               </TabsTrigger>
               <TabsTrigger 
+                value="timeline" 
+                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 font-medium whitespace-nowrap"
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Timeline
+              </TabsTrigger>
+              <TabsTrigger 
                 value="contacts" 
                 className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 font-medium whitespace-nowrap"
               >
@@ -108,6 +116,9 @@ export default function ProjectDetails() {
             </TabsContent>
             <TabsContent value="schedule" className="h-full m-0 p-0 overflow-auto">
               <ScheduleView projectId={projectId} />
+            </TabsContent>
+            <TabsContent value="timeline" className="h-full m-0 p-0 overflow-auto">
+              <TimelineView projectId={projectId} />
             </TabsContent>
             <TabsContent value="contacts" className="h-full m-0 p-0 overflow-auto">
               <ContactsView projectId={projectId} />
