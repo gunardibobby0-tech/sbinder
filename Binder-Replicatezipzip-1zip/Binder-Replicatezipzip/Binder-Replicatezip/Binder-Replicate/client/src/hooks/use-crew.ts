@@ -130,7 +130,7 @@ export function useDeleteCrewAssignment() {
       });
       if (!response.ok) throw new Error("Failed to delete crew assignment");
     },
-    onSuccess: (_, assignmentId) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crew-assignments"] });
     },
   });

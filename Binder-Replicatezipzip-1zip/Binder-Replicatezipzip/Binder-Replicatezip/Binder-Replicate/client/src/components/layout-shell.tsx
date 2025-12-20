@@ -8,6 +8,7 @@ import {
   Plus,
   Clapperboard,
   Menu,
+  MessageCircle,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -37,6 +38,15 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
             >
               <LayoutDashboard className="w-5 h-5 opacity-70" />
               Projects
+            </Button>
+          </Link>
+          <Link href="/chat">
+            <Button
+              variant={location === "/chat" ? "secondary" : "ghost"}
+              className="w-full justify-start gap-3 h-12 text-base font-medium"
+            >
+              <MessageCircle className="w-5 h-5 opacity-70" />
+              Chat
             </Button>
           </Link>
           <Link href="/settings">

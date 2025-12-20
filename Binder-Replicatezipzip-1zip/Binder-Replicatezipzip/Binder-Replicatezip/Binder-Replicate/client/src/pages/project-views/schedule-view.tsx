@@ -66,6 +66,11 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                     {event.type}
                   </span>
                   <h3 className="text-lg font-bold text-white">{event.title}</h3>
+                  {crew && crew.length > 0 && (
+                    <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary">
+                      {crew.length} crew
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1.5">
