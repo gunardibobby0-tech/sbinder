@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import type { Event, Crew, CrewAssignment } from "@shared/schema";
 import { Clock, MapPin, Users, Plus, Trash2, Briefcase } from "lucide-react";
 import { useState } from "react";
-import { useCrew, useCrewAssignments, useCreateCrewAssignment } from "@/hooks/use-crew";
+import { useCrew, useCrewAssignments, useCreateCrewAssignment, useDeleteCrewAssignment, useCheckCrewConflicts } from "@/hooks/use-crew";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface ScheduleDetailDialogProps {
@@ -26,9 +26,12 @@ export function ScheduleDetailDialog({
 }: ScheduleDetailDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [assigningCrew, setAssigningCrew] = useState(false);
+  const [crewConflicts, setCrewConflicts] = useState<{ [key: number]: boolean }>({});
   const { data: crew = [], isLoading: crewLoading } = useCrew(projectId || 0);
   const { data: assignments = [], isLoading: assignmentsLoading } = useCrewAssignments(projectId || 0);
   const { mutate: assignCrew, isPending: isAssigning } = useCreateCrewAssignment();
+  const { mutate: deleteCrew, isPending: isDeleting } = useDeleteCrewAssignment();
+  const { mutate: checkConflicts } = useCheckCrewConflicts();
   const queryClient = useQueryClient();
 
   const eventAssignments = assignments.filter(a => a.eventId === event?.id);
@@ -108,7 +111,12 @@ export function ScheduleDetailDialog({
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {}}
+                          onClick={() => {
+                            if (projectId) {
+                              deleteCrew({ projectId, assignmentId: assignment.id });
+                            }
+                          }}
+                          disabled={isDeleting}
                           className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -133,11 +141,22 @@ export function ScheduleDetailDialog({
                           key={crewMember.id}
                           onClick={() => {
                             if (!isAssigned && crewMember.id && event.id && projectId) {
-                              assignCrew(
-                                { projectId, data: { eventId: event.id, crewId: crewMember.id! } },
+                              checkConflicts(
+                                { projectId, crewId: crewMember.id, eventId: event.id },
                                 {
-                                  onSuccess: () => {
-                                    queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
+                                  onSuccess: (result) => {
+                                    if (result.hasConflict) {
+                                      setCrewConflicts({ ...crewConflicts, [crewMember.id!]: true });
+                                    } else {
+                                      assignCrew(
+                                        { projectId, data: { projectId, eventId: event.id, crewId: crewMember.id! } },
+                                        {
+                                          onSuccess: () => {
+                                            queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
+                                          },
+                                        }
+                                      );
+                                    }
                                   },
                                 }
                               );

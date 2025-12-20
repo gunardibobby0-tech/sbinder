@@ -119,3 +119,48 @@ export function useCreateCrewAssignment() {
     },
   });
 }
+
+export function useDeleteCrewAssignment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      assignmentId,
+    }: {
+      projectId: number;
+      assignmentId: number;
+    }) => {
+      const response = await fetch(`/api/projects/${projectId}/crew-assignments/${assignmentId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to delete crew assignment");
+    },
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
+    },
+  });
+}
+
+export function useCheckCrewConflicts() {
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      crewId,
+      eventId,
+    }: {
+      projectId: number;
+      crewId: number;
+      eventId: number;
+    }) => {
+      const response = await fetch(`/api/projects/${projectId}/crew-assignments/check-conflicts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ crewId, eventId }),
+      });
+      if (!response.ok) throw new Error("Failed to check conflicts");
+      return response.json();
+    },
+  });
+}
