@@ -289,6 +289,26 @@ export const api = {
         400: errorSchemas.validation,
       },
     },
+    checkConflicts: {
+      method: 'POST' as const,
+      path: '/api/projects/:projectId/crew-assignments/check-conflicts',
+      input: z.object({
+        crewId: z.number(),
+        eventId: z.number(),
+      }),
+      responses: {
+        200: z.object({
+          hasConflict: z.boolean(),
+          conflicts: z.array(z.object({
+            eventId: z.number(),
+            eventTitle: z.string(),
+            startTime: z.date(),
+            endTime: z.date(),
+          })),
+        }),
+        400: errorSchemas.validation,
+      },
+    },
   },
 };
 

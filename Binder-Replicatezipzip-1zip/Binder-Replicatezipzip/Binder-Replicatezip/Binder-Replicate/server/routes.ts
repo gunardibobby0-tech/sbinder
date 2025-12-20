@@ -487,6 +487,20 @@ export async function registerRoutes(
     }
   });
 
+  // === Crew Conflict Detection ===
+  app.post(api.crewAssignments.checkConflicts.path, async (req, res) => {
+    try {
+      const input = api.crewAssignments.checkConflicts.input.parse(req.body);
+      const conflicts = await storage.detectCrewConflicts(input.crewId, input.eventId);
+      res.json(conflicts);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
   // === AI Crew Suggestions ===
   app.post("/api/projects/:projectId/crew/suggest", async (req, res) => {
     try {

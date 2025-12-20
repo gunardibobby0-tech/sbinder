@@ -1,6 +1,6 @@
 import { 
   users, projects, documents, contacts, events, userSettings, crew, crewAssignments, equipment, equipmentAssignments, budgets, budgetLineItems, shotList,
-  type User, type InsertUser,
+  type User,
   type Project, type InsertProject,
   type Document, type InsertDocument,
   type Contact, type InsertContact,
@@ -15,7 +15,7 @@ import {
   type ShotList, type InsertShotList
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // Projects
@@ -85,6 +85,9 @@ export interface IStorage {
   createShotListItem(item: InsertShotList): Promise<ShotList>;
   updateShotListItem(id: number, updates: Partial<InsertShotList>): Promise<ShotList>;
   deleteShotListItem(id: number): Promise<void>;
+
+  // Crew Conflict Detection
+  detectCrewConflicts(crewId: number, eventId: number): Promise<{ hasConflict: boolean; conflicts: Array<{ eventId: number; eventTitle: string; startTime: Date; endTime: Date }> }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -337,6 +340,38 @@ export class DatabaseStorage implements IStorage {
 
   async deleteShotListItem(id: number): Promise<void> {
     await db.delete(shotList).where(eq(shotList.id, id));
+  }
+
+  // Crew Conflict Detection
+  async detectCrewConflicts(crewId: number, eventId: number): Promise<{ hasConflict: boolean; conflicts: Array<{ eventId: number; eventTitle: string; startTime: Date; endTime: Date }> }> {
+    const targetEvent = await db.select().from(events).where(eq(events.id, eventId));
+    if (!targetEvent.length) {
+      return { hasConflict: false, conflicts: [] };
+    }
+
+    const target = targetEvent[0];
+    const assignments = await db.select().from(crewAssignments).where(eq(crewAssignments.crewId, crewId));
+    const assignmentEventIds = assignments.map(a => a.eventId).filter(Boolean) as number[];
+    
+    if (assignmentEventIds.length === 0) {
+      return { hasConflict: false, conflicts: [] };
+    }
+
+    const assignedEvents = await db.select().from(events).where(inArray(events.id, assignmentEventIds));
+
+    const conflicts = assignedEvents.filter(evt => {
+      return (target.startTime < evt.endTime) && (target.endTime > evt.startTime);
+    });
+
+    return {
+      hasConflict: conflicts.length > 0,
+      conflicts: conflicts.map(c => ({
+        eventId: c.id,
+        eventTitle: c.title,
+        startTime: c.startTime,
+        endTime: c.endTime
+      }))
+    };
   }
 }
 
