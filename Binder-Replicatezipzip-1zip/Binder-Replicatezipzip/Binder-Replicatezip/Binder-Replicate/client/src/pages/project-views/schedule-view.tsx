@@ -1,7 +1,9 @@
 import { useEvents } from "@/hooks/use-events";
+import { useCrew } from "@/hooks/use-crew";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScheduleDetailDialog } from "@/components/schedule-detail-dialog";
+import { CallSheetGenerator } from "@/components/call-sheet-generator";
 import { Loader2, Calendar, Clock, MapPin } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -9,6 +11,7 @@ import type { Event } from "@shared/schema";
 
 export default function ScheduleView({ projectId }: { projectId: number }) {
   const { data: events, isLoading } = useEvents(projectId);
+  const { data: crew } = useCrew(projectId);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
@@ -70,16 +73,19 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                 </div>
               </div>
 
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="border-white/10 hover:border-primary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-              >
-                View Details
-              </Button>
+              <div className="flex gap-2 items-center">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="border-white/10 hover:border-primary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  View Details
+                </Button>
+                <CallSheetGenerator projectId={projectId} event={event} crew={crew} />
+              </div>
             </Card>
           ))
         )}

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./auth";
 import { registerChatRoutes } from "./replit_integrations/chat";
 import { extractScriptData, generateScript, fetchOpenRouterModels } from "./replit_integrations/ai/client";
+import { generateCallSheetPDF } from "./pdf-generator";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -398,6 +399,30 @@ export async function registerRoutes(
     
     await storage.deleteEvent(Number(req.params.id));
     res.sendStatus(204);
+  });
+
+  // === Call Sheet PDF Generation ===
+  app.post("/api/projects/:projectId/call-sheet", async (req, res) => {
+    try {
+      const { eventId, eventDetails, crewMembers, equipmentList } = req.body;
+
+      if (!eventDetails) {
+        return res.status(400).json({ error: "Event details are required" });
+      }
+
+      const pdfBuffer = await generateCallSheetPDF({
+        eventDetails,
+        crewMembers: crewMembers || [],
+        equipmentList: equipmentList || [],
+      });
+
+      res.contentType("application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="call-sheet-${eventId}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating call sheet:", error);
+      res.status(500).json({ error: "Failed to generate call sheet PDF" });
+    }
   });
 
   // === Crew ===
