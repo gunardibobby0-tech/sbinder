@@ -3,12 +3,13 @@ import { useRoute, useLocation } from "wouter";
 import { LayoutShell } from "@/components/layout-shell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, FileText, Users, CalendarDays, Settings, DollarSign, BarChart3 } from "lucide-react";
+import { Loader2, ArrowLeft, FileText, Users, CalendarDays, Settings, DollarSign, BarChart3, Film } from "lucide-react";
 import ScriptView from "./project-views/script-view";
 import ContactsView from "./project-views/contacts-view";
 import ScheduleView from "./project-views/schedule-view";
 import BudgetView from "./project-views/budget-view";
 import TimelineView from "./project-views/timeline-view";
+import ShotListView from "./project-views/shot-list-view";
 
 export default function ProjectDetails() {
   const [match, params] = useRoute("/project/:id");
@@ -107,6 +108,13 @@ export default function ProjectDetails() {
                 <DollarSign className="w-4 h-4 mr-2" />
                 Budget
               </TabsTrigger>
+              <TabsTrigger 
+                value="shots" 
+                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 font-medium whitespace-nowrap"
+              >
+                <Film className="w-4 h-4 mr-2" />
+                Shot List
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -125,6 +133,9 @@ export default function ProjectDetails() {
             </TabsContent>
             <TabsContent value="budget" className="h-full m-0 p-0 overflow-auto">
               <BudgetView projectId={projectId} />
+            </TabsContent>
+            <TabsContent value="shots" className="h-full m-0 p-0 overflow-auto">
+              <ShotListView projectId={projectId} />
             </TabsContent>
           </div>
         </Tabs>

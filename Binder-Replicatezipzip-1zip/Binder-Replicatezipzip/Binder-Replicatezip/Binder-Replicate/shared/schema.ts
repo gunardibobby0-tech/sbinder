@@ -121,6 +121,22 @@ export const budgetLineItems = pgTable("budget_line_items", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const shotList = pgTable("shot_list", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  sceneNumber: text("scene_number").notNull(), // e.g., "1A", "2B"
+  description: text("description").notNull(), // Shot description
+  shotType: text("shot_type").notNull(), // Wide, Medium, Close-up, etc.
+  duration: text("duration"), // e.g., "30 sec"
+  location: text("location"), // Where shot takes place
+  equipment: text("equipment"), // Equipment needed
+  notes: text("notes"),
+  priority: text("priority").default("medium"), // high, medium, low
+  status: text("status").default("planned"), // planned, shot, approved
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // === SCHEMAS ===
 
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true });
@@ -134,6 +150,7 @@ export const insertEquipmentSchema = createInsertSchema(equipment).omit({ id: tr
 export const insertEquipmentAssignmentSchema = createInsertSchema(equipmentAssignments).omit({ id: true, createdAt: true });
 export const insertBudgetSchema = createInsertSchema(budgets).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertBudgetLineItemSchema = createInsertSchema(budgetLineItems).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertShotListSchema = createInsertSchema(shotList).omit({ id: true, createdAt: true, updatedAt: true });
 
 // === TYPES ===
 
@@ -169,3 +186,6 @@ export type InsertBudget = z.infer<typeof insertBudgetSchema>;
 
 export type BudgetLineItem = typeof budgetLineItems.$inferSelect;
 export type InsertBudgetLineItem = z.infer<typeof insertBudgetLineItemSchema>;
+
+export type ShotList = typeof shotList.$inferSelect;
+export type InsertShotList = z.infer<typeof insertShotListSchema>;

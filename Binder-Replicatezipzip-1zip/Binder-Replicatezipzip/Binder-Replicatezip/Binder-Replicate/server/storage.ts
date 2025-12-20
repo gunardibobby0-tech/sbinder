@@ -1,5 +1,5 @@
 import { 
-  users, projects, documents, contacts, events, userSettings, crew, crewAssignments, equipment, equipmentAssignments, budgets, budgetLineItems,
+  users, projects, documents, contacts, events, userSettings, crew, crewAssignments, equipment, equipmentAssignments, budgets, budgetLineItems, shotList,
   type User, type InsertUser,
   type Project, type InsertProject,
   type Document, type InsertDocument,
@@ -11,7 +11,8 @@ import {
   type Equipment, type InsertEquipment,
   type EquipmentAssignment, type InsertEquipmentAssignment,
   type Budget, type InsertBudget,
-  type BudgetLineItem, type InsertBudgetLineItem
+  type BudgetLineItem, type InsertBudgetLineItem,
+  type ShotList, type InsertShotList
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -78,6 +79,12 @@ export interface IStorage {
   createBudgetLineItem(item: InsertBudgetLineItem): Promise<BudgetLineItem>;
   updateBudgetLineItem(id: number, updates: Partial<InsertBudgetLineItem>): Promise<BudgetLineItem>;
   deleteBudgetLineItem(id: number): Promise<void>;
+
+  // Shot List
+  getShotList(projectId: number): Promise<ShotList[]>;
+  createShotListItem(item: InsertShotList): Promise<ShotList>;
+  updateShotListItem(id: number, updates: Partial<InsertShotList>): Promise<ShotList>;
+  deleteShotListItem(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -306,6 +313,30 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBudgetLineItem(id: number): Promise<void> {
     await db.delete(budgetLineItems).where(eq(budgetLineItems.id, id));
+  }
+
+  // Shot List
+  async getShotList(projectId: number): Promise<ShotList[]> {
+    return await db.select().from(shotList)
+      .where(eq(shotList.projectId, projectId))
+      .orderBy(desc(shotList.createdAt));
+  }
+
+  async createShotListItem(item: InsertShotList): Promise<ShotList> {
+    const [newItem] = await db.insert(shotList).values(item).returning();
+    return newItem;
+  }
+
+  async updateShotListItem(id: number, updates: Partial<InsertShotList>): Promise<ShotList> {
+    const [updated] = await db.update(shotList)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(shotList.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteShotListItem(id: number): Promise<void> {
+    await db.delete(shotList).where(eq(shotList.id, id));
   }
 }
 
