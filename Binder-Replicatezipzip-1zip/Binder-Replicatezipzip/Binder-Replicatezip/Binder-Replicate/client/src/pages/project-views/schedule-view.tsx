@@ -1,10 +1,10 @@
 import { useEvents } from "@/hooks/use-events";
-import { useCrew } from "@/hooks/use-crew";
+import { useCrew, useCrewAssignments } from "@/hooks/use-crew";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScheduleDetailDialog } from "@/components/schedule-detail-dialog";
 import { CallSheetGenerator } from "@/components/call-sheet-generator";
-import { Loader2, Calendar, Clock, MapPin } from "lucide-react";
+import { Loader2, Calendar, Clock, MapPin, Users } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
 import type { Event } from "@shared/schema";
@@ -12,6 +12,7 @@ import type { Event } from "@shared/schema";
 export default function ScheduleView({ projectId }: { projectId: number }) {
   const { data: events, isLoading } = useEvents(projectId);
   const { data: crew } = useCrew(projectId);
+  const { data: assignments = [] } = useCrewAssignments(projectId);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
@@ -34,7 +35,9 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
             <p className="text-muted-foreground">Plan your shoots, scouts, and meetings.</p>
           </div>
         ) : (
-          events?.map((event) => (
+          events?.map((event) => {
+            const eventCrewCount = assignments.filter(a => a.eventId === event.id).length;
+            return (
             <Card 
               key={event.id} 
               className="bg-card border-white/5 p-6 flex flex-col md:flex-row md:items-center gap-6 hover:border-primary/50 hover:bg-card/80 transition-all cursor-pointer"
@@ -43,9 +46,14 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                 setDetailDialogOpen(true);
               }}
             >
-              <div className="flex-shrink-0 w-16 h-16 bg-black/30 rounded-lg flex flex-col items-center justify-center border border-white/5">
+              <div className="flex-shrink-0 w-16 h-16 bg-black/30 rounded-lg flex flex-col items-center justify-center border border-white/5 relative">
                 <span className="text-xs text-muted-foreground uppercase font-bold">{format(new Date(event.startTime), "MMM")}</span>
                 <span className="text-2xl font-bold text-white">{format(new Date(event.startTime), "d")}</span>
+                {eventCrewCount > 0 && (
+                  <div className="absolute -top-2 -right-2 bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {eventCrewCount}
+                  </div>
+                )}
               </div>
               
               <div className="flex-1">
@@ -70,6 +78,12 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                       {event.description}
                     </div>
                   )}
+                  {eventCrewCount > 0 && (
+                    <div className="flex items-center gap-1.5 text-primary">
+                      <Users className="w-3.5 h-3.5" />
+                      {eventCrewCount} {eventCrewCount === 1 ? 'person' : 'people'} assigned
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -87,7 +101,8 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                 <CallSheetGenerator projectId={projectId} event={event} crew={crew} />
               </div>
             </Card>
-          ))
+          );
+          })
         )}
       </div>
 

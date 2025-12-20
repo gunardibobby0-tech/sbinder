@@ -6,9 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
 import type { Event, Crew, CrewAssignment } from "@shared/schema";
-import { Clock, MapPin, Users, Plus, Trash2, Briefcase } from "lucide-react";
+import { Clock, MapPin, Users, Plus, Trash2, Briefcase, AlertCircle } from "lucide-react";
 import { useState } from "react";
-import { useCrew, useCrewAssignments, useCreateCrewAssignment } from "@/hooks/use-crew";
+import { useCrew, useCrewAssignments, useCreateCrewAssignment, useDeleteCrewAssignment, useCheckCrewConflicts } from "@/hooks/use-crew";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface ScheduleDetailDialogProps {
@@ -26,9 +26,12 @@ export function ScheduleDetailDialog({
 }: ScheduleDetailDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [assigningCrew, setAssigningCrew] = useState(false);
+  const [conflictWarnings, setConflictWarnings] = useState<Record<number, Array<{ eventTitle: string; startTime: Date; endTime: Date }>>>({});
   const { data: crew = [], isLoading: crewLoading } = useCrew(projectId || 0);
   const { data: assignments = [], isLoading: assignmentsLoading } = useCrewAssignments(projectId || 0);
   const { mutate: assignCrew, isPending: isAssigning } = useCreateCrewAssignment();
+  const { mutate: deleteCrew, isPending: isDeleting } = useDeleteCrewAssignment();
+  const { mutate: checkConflicts } = useCheckCrewConflicts();
   const queryClient = useQueryClient();
 
   const eventAssignments = assignments.filter(a => a.eventId === event?.id);
@@ -108,7 +111,8 @@ export function ScheduleDetailDialog({
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {}}
+                          onClick={() => deleteCrew(assignment.id!)}
+                          disabled={isDeleting}
                           className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -128,39 +132,77 @@ export function ScheduleDetailDialog({
                   <div className="max-h-[200px] overflow-y-auto space-y-2">
                     {crew.map((crewMember) => {
                       const isAssigned = eventAssignments.some(a => a.crewId === crewMember.id);
+                      const hasConflict = conflictWarnings[crewMember.id!];
                       return (
-                        <button
-                          key={crewMember.id}
-                          onClick={() => {
-                            if (!isAssigned && crewMember.id && event.id && projectId) {
-                              assignCrew(
-                                { projectId, data: { eventId: event.id, crewId: crewMember.id! } },
-                                {
-                                  onSuccess: () => {
-                                    queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
-                                  },
-                                }
-                              );
-                            }
-                          }}
-                          disabled={isAssigned || isAssigning}
-                          className={`w-full text-left px-3 py-2 rounded border transition-colors ${
-                            isAssigned
-                              ? "bg-green-500/10 border-green-500/20 text-green-400 cursor-not-allowed"
-                              : "bg-black/20 border-white/10 hover:border-primary hover:bg-primary/10 text-white"
-                          }`}
-                        >
-                          <div className="font-medium">{crewMember.name}</div>
-                          <div className="text-xs text-muted-foreground">{crewMember.department}</div>
-                          {isAssigned && <div className="text-xs text-green-400 mt-1">✓ Assigned</div>}
-                        </button>
+                        <div key={crewMember.id}>
+                          <button
+                            onClick={() => {
+                              if (!isAssigned && crewMember.id && event.id && projectId) {
+                                checkConflicts(
+                                  { projectId, crewId: crewMember.id, eventId: event.id },
+                                  {
+                                    onSuccess: (result) => {
+                                      setConflictWarnings(prev => ({
+                                        ...prev,
+                                        [crewMember.id!]: result.conflicts
+                                      }));
+                                      if (!result.hasConflict) {
+                                        assignCrew(
+                                          { projectId, data: { projectId, eventId: event.id, crewId: crewMember.id! } },
+                                          {
+                                            onSuccess: () => {
+                                              queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
+                                              setConflictWarnings(prev => {
+                                                const updated = { ...prev };
+                                                delete updated[crewMember.id!];
+                                                return updated;
+                                              });
+                                            },
+                                          }
+                                        );
+                                      }
+                                    },
+                                  }
+                                );
+                              }
+                            }}
+                            disabled={isAssigned || isAssigning}
+                            className={`w-full text-left px-3 py-2 rounded border transition-colors ${
+                              isAssigned
+                                ? "bg-green-500/10 border-green-500/20 text-green-400 cursor-not-allowed"
+                                : hasConflict
+                                ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-400"
+                                : "bg-black/20 border-white/10 hover:border-primary hover:bg-primary/10 text-white"
+                            }`}
+                          >
+                            <div className="font-medium">{crewMember.name}</div>
+                            <div className="text-xs text-muted-foreground">{crewMember.department}</div>
+                            {isAssigned && <div className="text-xs text-green-400 mt-1">✓ Assigned</div>}
+                          </button>
+                          {hasConflict && (
+                            <div className="mt-1 ml-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded text-xs text-yellow-400">
+                              <div className="flex gap-1 items-start">
+                                <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <p className="font-medium">Schedule conflict:</p>
+                                  {hasConflict.map((conflict, idx) => (
+                                    <p key={idx}>{conflict.eventTitle} ({format(new Date(conflict.startTime), "h:mm a")})</p>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setAssigningCrew(false)}
+                    onClick={() => {
+                      setAssigningCrew(false);
+                      setConflictWarnings({});
+                    }}
                     className="w-full"
                   >
                     Done

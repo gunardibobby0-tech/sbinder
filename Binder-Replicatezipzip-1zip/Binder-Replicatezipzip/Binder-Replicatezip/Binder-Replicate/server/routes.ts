@@ -501,6 +501,16 @@ export async function registerRoutes(
     }
   });
 
+  // === Delete Crew Assignment ===
+  app.delete(api.crewAssignments.delete.path, async (req, res) => {
+    try {
+      await storage.deleteCrewAssignment(Number(req.params.assignmentId));
+      res.sendStatus(204);
+    } catch (err) {
+      res.status(404).json({ message: "Assignment not found" });
+    }
+  });
+
   // === AI Crew Suggestions ===
   app.post("/api/projects/:projectId/crew/suggest", async (req, res) => {
     try {
