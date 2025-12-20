@@ -20,7 +20,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install dumb-init for signal handling
-RUN apk add --no-cache dumb-init
+RUN apk update && apk add --no-cache dumb-init
 
 # Copy package files for production dependencies
 COPY package*.json ./
@@ -39,7 +39,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:5000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
 # Use dumb-init to handle signals properly
-ENTRYPOINT ["/sbin/dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
 # Start the server
 CMD ["node", "dist/index.cjs"]
