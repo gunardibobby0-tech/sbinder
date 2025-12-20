@@ -9,6 +9,7 @@ import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import ProjectDetails from "@/pages/project-details";
 import Settings from "@/pages/settings";
+import ChatPage from "@/pages/chat-page";
 import NotFound from "@/pages/not-found";
 import { useEffect } from "react";
 
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/" component={user ? Dashboard : Login} />
       <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/project/:id" component={() => <ProtectedRoute component={ProjectDetails} />} />
+      <Route path="/chat" component={() => <ProtectedRoute component={ChatPage} />} />
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
       <Route component={NotFound} />
     </Switch>
