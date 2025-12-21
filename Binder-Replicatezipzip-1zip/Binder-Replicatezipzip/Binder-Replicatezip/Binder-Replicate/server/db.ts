@@ -27,8 +27,42 @@ export const db = drizzle({ client: pool, schema });
     const migrationsFolder = path.resolve(process.cwd(), 'migrations');
     await migrate(db, { migrationsFolder });
     console.log('✓ Database migrations completed');
-  } catch (err) {
-    console.error('Migration error:', err);
-    // Don't throw - let server continue even if migrations fail (they might already be applied)
+  } catch (err: any) {
+    // If migrations fail due to existing tables, create missing tables directly
+    if (err.code === '42P07' || err.message?.includes('already exists')) {
+      console.log('✓ Database tables already exist, ensuring cast/crew_master exist...');
+      try {
+        // Create cast table if missing
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS "cast" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "project_id" integer NOT NULL,
+            "role" text NOT NULL,
+            "role_type" text NOT NULL,
+            "crew_master_id" integer,
+            "notes" text,
+            "created_at" timestamp DEFAULT now()
+          )
+        `);
+        // Create crew_master table if missing
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS "crew_master" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "name" text NOT NULL,
+            "title" text NOT NULL,
+            "department" text,
+            "email" text,
+            "phone" text,
+            "notes" text,
+            "created_at" timestamp DEFAULT now()
+          )
+        `);
+        console.log('✓ All required tables ready');
+      } catch (tableErr) {
+        console.error('Error ensuring cast/crew_master tables:', tableErr);
+      }
+    } else {
+      console.error('Migration error:', err.message);
+    }
   }
 })();
