@@ -322,14 +322,14 @@ function AddCastDialog({ projectId, crewMaster }: { projectId: number; crewMaste
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Assign Talent (Optional)</FormLabel>
-                  <Select onValueChange={(val) => field.onChange(val ? parseInt(val) : undefined)} value={field.value ? String(field.value) : ""}>
+                  <Select onValueChange={(val) => field.onChange(val === "unassigned" ? undefined : parseInt(val))} value={field.value ? String(field.value) : "unassigned"}>
                     <FormControl>
                       <SelectTrigger className="bg-black/20 border-white/10">
                         <SelectValue placeholder="Select talent from master" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-[#1c2128] border-white/10 text-white">
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
                       {crewMaster?.map((crew) => (
                         <SelectItem key={crew.id} value={String(crew.id)}>
                           {crew.name} - {crew.title}
@@ -722,14 +722,14 @@ function EditCastDialog({ projectId, castItem, crewMaster, onClose }: { projectI
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Assign Talent</FormLabel>
-                  <Select onValueChange={(val) => field.onChange(val ? parseInt(val) : undefined)} value={field.value ? String(field.value) : ""}>
+                  <Select onValueChange={(val) => field.onChange(val === "unassigned" ? undefined : parseInt(val))} value={field.value ? String(field.value) : "unassigned"}>
                     <FormControl>
                       <SelectTrigger className="bg-black/20 border-white/10">
                         <SelectValue placeholder="Select talent" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-[#1c2128] border-white/10 text-white">
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
                       {crewMaster?.map((crew) => (
                         <SelectItem key={crew.id} value={String(crew.id)}>
                           {crew.name} - {crew.title}
