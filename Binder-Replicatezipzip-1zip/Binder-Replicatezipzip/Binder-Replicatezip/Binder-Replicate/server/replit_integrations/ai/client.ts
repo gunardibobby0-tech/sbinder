@@ -96,7 +96,7 @@ export async function callOpenRouter(
         model,
         messages,
         temperature: 0.7,
-        max_tokens: 4000,
+        max_tokens: 1500,
       }),
     });
 
@@ -132,15 +132,25 @@ export async function extractScriptData(
   crew: Array<{ name: string; role: string; department?: string }>;
   schedule: Array<{ title: string; description: string; duration: number }>;
 }> {
-  const prompt = `Extract production data from this script as JSON only. No explanation, just JSON.
+  const prompt = `Analyze this script and extract JSON data. IMPORTANT: Respond with ONLY valid JSON, no markdown formatting, no extra text.
 
-Script:
-${documentContent.substring(0, 2000)}
+SCRIPT:
+${documentContent.substring(0, 1500)}
 
-Return only this JSON structure (no markdown, no text):
-{"scriptContent":"","cast":[{"name":"character name","role":"description"}],"crew":[{"name":"job title","role":"description","department":"category"}],"schedule":[{"title":"day title","description":"what happens","duration":480}]}
+RETURN THIS JSON (ONLY):
+{
+  "scriptContent": "Brief summary of script",
+  "cast": [{"name": "Character name", "role": "Description"}],
+  "crew": [{"name": "Director", "role": "Oversight", "department": "Direction"}, {"name": "Cinematographer", "role": "Camera", "department": "Camera"}],
+  "schedule": [{"title": "Day 1", "description": "Shoot", "duration": 480}]
+}
 
-Rules: extract character names from script to cast, suggest 5-8 crew job positions like Director/DP/Sound, use 480 minutes for typical 8-hour day.`;
+RULES:
+- Extract character names from script to cast array
+- Suggest 5-8 crew positions (Director, DP, Sound, Gaffer, etc.)
+- Return ONLY the JSON object, no markdown, no code blocks
+- If JSON is incomplete, close all brackets properly
+- duration = minutes (480 = 8 hour day)`;
 
   try {
     const response = await callOpenRouter([
@@ -154,19 +164,50 @@ Rules: extract character names from script to cast, suggest 5-8 crew job positio
     console.log('API Response length:', response?.length || 0);
     console.log('API Response preview:', response?.substring(0, 200) || 'empty');
 
-    // Extract JSON from response (handle potential markdown formatting)
-    const jsonMatch = response?.match(/\{[\s\S]*\}/);
+    // Extract JSON from response (handle potential markdown formatting and truncation)
+    let jsonStr = response?.trim() || '';
+    
+    // Remove markdown code blocks if present
+    jsonStr = jsonStr.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+    jsonStr = jsonStr.replace(/^```\n?/, '').replace(/\n?```$/, '');
+    
+    // Try to find complete JSON object
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
     if (!jsonMatch || !jsonMatch[0]) {
-      console.error('No JSON found in response. Full response:', response?.substring(0, 500) || 'empty');
+      console.error('No JSON found in response. Full response:', jsonStr?.substring(0, 500) || 'empty');
       throw new Error(`No JSON found in response (length: ${response?.length || 0})`);
+    }
+
+    let jsonToparse = jsonMatch[0];
+    
+    // Handle incomplete JSON (truncated response) by closing brackets
+    try {
+      JSON.parse(jsonToparse);
+    } catch (e: any) {
+      // If JSON is incomplete, try to fix by closing brackets
+      if (e.message.includes('Unexpected end of JSON')) {
+        console.log('Attempting to fix incomplete JSON...');
+        // Close any unclosed arrays/objects
+        let bracketCount = 0;
+        let braceCount = 0;
+        for (let i = 0; i < jsonToparse.length; i++) {
+          if (jsonToparse[i] === '[') bracketCount++;
+          if (jsonToparse[i] === ']') bracketCount--;
+          if (jsonToparse[i] === '{') braceCount++;
+          if (jsonToparse[i] === '}') braceCount--;
+        }
+        while (bracketCount > 0) { jsonToparse += ']'; bracketCount--; }
+        while (braceCount > 0) { jsonToparse += '}'; braceCount--; }
+        console.log('Fixed JSON length:', jsonToparse.length);
+      }
     }
 
     let parsed;
     try {
-      parsed = JSON.parse(jsonMatch[0]);
+      parsed = JSON.parse(jsonToparse);
     } catch (parseError) {
       console.error('Failed to parse JSON:', parseError);
-      console.error('JSON string:', jsonMatch[0]?.substring(0, 500));
+      console.error('JSON string:', jsonToparse?.substring(0, 500));
       throw new Error('Failed to parse JSON response from API');
     }
     
