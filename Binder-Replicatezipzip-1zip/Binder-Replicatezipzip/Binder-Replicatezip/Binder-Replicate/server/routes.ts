@@ -270,7 +270,7 @@ export async function registerRoutes(
   // === Auto-Suggest Cast and Crew from Script ===
   app.post("/api/projects/:projectId/auto-suggest", async (req, res) => {
     try {
-      const { scriptContent, model } = req.body;
+      const { scriptContent, model, dateRange, daysOfWeek } = req.body;
       const projectId = Number(req.params.projectId);
       const userId = (req.user as any)?.id || "user_1";
 
@@ -283,7 +283,7 @@ export async function registerRoutes(
       const selectedModel = model || userSettings?.preferredModel || "meta-llama/llama-3.3-70b-instruct";
 
       // Extract cast, crew, and schedule from script
-      const suggestions = await extractScriptData(scriptContent, selectedModel);
+      const suggestions = await extractScriptData(scriptContent, selectedModel, dateRange, daysOfWeek);
 
       // Get existing contacts to check for duplicates
       const existingContacts = await storage.getContacts(projectId);
@@ -318,10 +318,10 @@ export async function registerRoutes(
       );
 
       // Create schedule events
-      const now = new Date();
+      const baseDate = dateRange?.startDate ? new Date(dateRange.startDate) : new Date();
       const createdEvents = await Promise.all(
         suggestions.schedule.map((s, idx) => {
-          const startTime = new Date(now.getTime() + idx * 24 * 60 * 60 * 1000);
+          const startTime = new Date(baseDate.getTime() + idx * 24 * 60 * 60 * 1000);
           const endTime = new Date(startTime.getTime() + s.duration * 60 * 1000);
           return storage.createEvent({
             projectId,

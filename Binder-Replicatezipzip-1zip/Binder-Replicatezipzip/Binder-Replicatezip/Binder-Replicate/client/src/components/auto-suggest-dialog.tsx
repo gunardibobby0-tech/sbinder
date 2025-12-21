@@ -1,5 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useAutoSuggest } from "@/hooks/use-script-generation";
 import { useLanguage } from "@/hooks/use-language.tsx";
 import { t } from "@/lib/i18n";
@@ -19,9 +22,19 @@ export function AutoSuggestDialog({
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<'confirm' | 'processing' | 'complete'>('confirm');
   const [suggestedData, setSuggestedData] = useState<any>(null);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const { mutate, isPending } = useAutoSuggest();
   const { toast } = useToast();
   const { language } = useLanguage();
+
+  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  const toggleDay = (day: string) => {
+    setSelectedDays(prev => 
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
+  };
 
   const handleAutoSuggest = () => {
     if (!scriptContent.trim()) {
@@ -38,6 +51,8 @@ export function AutoSuggestDialog({
       {
         projectId,
         scriptContent,
+        dateRange: (dateRange.startDate && dateRange.endDate) ? dateRange : undefined,
+        daysOfWeek: selectedDays.length > 0 ? selectedDays : undefined,
       },
       {
         onSuccess: (data) => {
@@ -113,6 +128,51 @@ export function AutoSuggestDialog({
                     <span>Generate cast suggestions</span>
                   </li>
                 </ul>
+              </div>
+
+              <div className="space-y-4 border-t border-white/10 pt-4">
+                <div>
+                  <Label className="text-sm font-medium text-white mb-2 block">Production Date Range (Optional)</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Start Date</Label>
+                      <Input
+                        type="date"
+                        value={dateRange.startDate}
+                        onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                        className="bg-black/20 border-white/10 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">End Date</Label>
+                      <Input
+                        type="date"
+                        value={dateRange.endDate}
+                        onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                        className="bg-black/20 border-white/10 text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-white mb-3 block">Production Days (Optional)</Label>
+                  <div className="grid grid-cols-4 gap-3">
+                    {daysOfWeek.map((day) => (
+                      <div key={day} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={day}
+                          checked={selectedDays.includes(day)}
+                          onCheckedChange={() => toggleDay(day)}
+                          className="border-white/30"
+                        />
+                        <Label htmlFor={day} className="text-xs text-muted-foreground cursor-pointer">
+                          {day.slice(0, 3)}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-white/10">

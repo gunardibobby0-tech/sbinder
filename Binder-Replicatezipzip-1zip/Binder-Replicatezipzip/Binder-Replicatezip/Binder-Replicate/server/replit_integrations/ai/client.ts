@@ -110,17 +110,25 @@ export async function callOpenRouter(
 
 export async function extractScriptData(
   documentContent: string,
-  model: string = 'meta-llama/llama-3.3-70b-instruct'
+  model: string = 'meta-llama/llama-3.3-70b-instruct',
+  dateRange?: { startDate: string; endDate: string },
+  daysOfWeek?: string[]
 ): Promise<{
   scriptContent: string;
   cast: Array<{ name: string; role: string }>;
   crew: Array<{ name: string; role: string }>;
   schedule: Array<{ title: string; description: string; duration: number }>;
 }> {
+  const dateRangeInfo = dateRange ? `\nProduction Date Range: From ${dateRange.startDate} to ${dateRange.endDate}` : '';
+  const daysInfo = daysOfWeek && daysOfWeek.length > 0 ? `\nProduction Days: ${daysOfWeek.join(', ')}` : '';
+  
+  const dateRangeInstruction = dateRange ? '\n5. Schedule all events within the provided date range' : '';
+  const daysInstruction = daysOfWeek && daysOfWeek.length > 0 ? '\n6. Only schedule events on the specified production days (Monday-Sunday)' : '';
+  
   const prompt = `You are a professional film and TV production expert. Your task is to analyze a screenplay, script, or production document and extract key production data including suggested crew positions.
 
 DOCUMENT TO ANALYZE:
-${documentContent}
+${documentContent}${dateRangeInfo}${daysInfo}
 
 EXTRACTION INSTRUCTIONS:
 1. Extract the main script content (narrative, dialogue, scene descriptions)
@@ -130,7 +138,7 @@ EXTRACTION INSTRUCTIONS:
    - For interviews: Producer, Sound Technician, Lighting Technician
    - For documentaries: Producer, Camera Operator, Sound Mixer, Editor
    - Always include: 1st Assistant Director, Production Manager
-4. Extract production schedule events with realistic durations
+4. Extract production schedule events with realistic durations${dateRangeInstruction}${daysInstruction}
 
 EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
 {
