@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { format } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import type { Event, Crew, CrewAssignment } from "@shared/schema";
 import { Clock, MapPin, Users, Plus, Trash2, Briefcase, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { useCrew, useCrewAssignments, useCreateCrewAssignment, useDeleteCrewAssignment, useCheckCrewConflicts } from "@/hooks/use-crew";
 import { useUpdateEvent } from "@/hooks/use-events";
+import { useEvents } from "@/hooks/use-events";
+import { useCreateBudgetLineItem } from "@/hooks/use-budget";
+import { useSettings } from "@/hooks/use-settings";
 import { useQueryClient } from "@tanstack/react-query";
 import { LocationPicker } from "@/components/location-picker";
 
@@ -33,11 +36,34 @@ export function ScheduleDetailDialog({
   
   const { data: crew = [], isLoading: crewLoading } = useCrew(projectId || 0);
   const { data: assignments = [], isLoading: assignmentsLoading } = useCrewAssignments(projectId || 0);
+  const { data: allEvents = [] } = useEvents(projectId || 0);
   const { mutate: assignCrew, isPending: isAssigning } = useCreateCrewAssignment();
   const { mutate: deleteCrew, isPending: isDeleting } = useDeleteCrewAssignment();
   const { mutate: checkConflicts } = useCheckCrewConflicts();
   const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
+  const { mutate: createBudgetItem } = useCreateBudgetLineItem();
+  const { settings } = useSettings();
   const queryClient = useQueryClient();
+
+  // Calculate project duration in days
+  const calculateProjectDuration = () => {
+    if (!allEvents || allEvents.length === 0) return 1;
+    const totalMinutes = allEvents.reduce((sum, e) => sum + differenceInMinutes(new Date(e.endTime), new Date(e.startTime)), 0);
+    return Math.max(1, Math.ceil(totalMinutes / (8 * 60))); // Assume 8-hour work day
+  };
+
+  // Calculate crew cost estimate
+  const calculateCrewCost = (crewMember: Crew) => {
+    if (!crewMember.costAmount || !crewMember.paymentType) return null;
+    const amount = parseFloat(crewMember.costAmount);
+    if (crewMember.paymentType === "hourly") {
+      const totalMinutes = allEvents.reduce((sum, e) => sum + differenceInMinutes(new Date(e.endTime), new Date(e.startTime)), 0);
+      return Math.round((totalMinutes / 60) * amount);
+    } else if (crewMember.paymentType === "daily") {
+      return Math.round(amount * calculateProjectDuration());
+    }
+    return amount; // fixed
+  };
 
   const eventAssignments = assignments.filter(a => a.eventId === event?.id);
 
@@ -268,6 +294,21 @@ export function ScheduleDetailDialog({
                                           { projectId, data: { projectId, eventId: event.id, crewId: crewMember.id! } },
                                           {
                                             onSuccess: () => {
+                                              // Auto-create budget line item
+                                              const estimatedCost = calculateCrewCost(crewMember);
+                                              if (estimatedCost && projectId) {
+                                                createBudgetItem(
+                                                  {
+                                                    projectId,
+                                                    data: {
+                                                      category: "Crew",
+                                                      description: `${crewMember.name} - ${crewMember.title} (${crewMember.paymentType})`,
+                                                      amount: estimatedCost.toString(),
+                                                      status: "estimated",
+                                                    },
+                                                  }
+                                                );
+                                              }
                                               queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
                                               setConflictWarnings(prev => {
                                                 const updated = { ...prev };
