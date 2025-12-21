@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { ScheduleDetailDialog } from "@/components/schedule-detail-dialog";
 import { CrewAvailabilityCalendar } from "@/components/crew-availability-calendar";
 import { CallSheetGenerator } from "@/components/call-sheet-generator";
+import { LocationPicker } from "@/components/location-picker";
 import { Loader2, Calendar, Clock, MapPin, Users, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -24,6 +25,8 @@ const createEventSchema = z.object({
   startTime: z.string().min(1, "Start time required"),
   endTime: z.string().min(1, "End time required"),
   description: z.string().optional(),
+  latitude: z.string().optional(),
+  longitude: z.string().optional(),
 });
 
 export default function ScheduleView({ projectId }: { projectId: number }) {
@@ -45,6 +48,8 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
       startTime: "",
       endTime: "",
       description: "",
+      latitude: "",
+      longitude: "",
     },
   });
 
@@ -57,6 +62,8 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
         startTime: new Date(data.startTime).toISOString() as any,
         endTime: new Date(data.endTime).toISOString() as any,
         description: data.description,
+        latitude: data.latitude,
+        longitude: data.longitude,
       },
       {
         onSuccess: () => {
@@ -163,6 +170,20 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                     </FormItem>
                   )}
                 />
+                <Card className="bg-black/20 border-white/10 p-4">
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    Add Location (Optional)
+                  </h3>
+                  <LocationPicker
+                    latitude={form.watch("latitude")}
+                    longitude={form.watch("longitude")}
+                    onLocationChange={(lat, lng) => {
+                      form.setValue("latitude", lat);
+                      form.setValue("longitude", lng);
+                    }}
+                  />
+                </Card>
                 <Button type="submit" disabled={isCreating} className="w-full bg-primary hover:bg-primary/90">
                   Create Event
                 </Button>

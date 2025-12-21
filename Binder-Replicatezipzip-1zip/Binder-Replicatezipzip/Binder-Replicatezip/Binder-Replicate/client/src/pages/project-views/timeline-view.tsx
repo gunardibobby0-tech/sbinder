@@ -1,6 +1,7 @@
 import { useEvents } from "@/hooks/use-events";
 import { Card } from "@/components/ui/card";
-import { Loader2, Calendar, Clock, TrendingUp, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Calendar, Clock, TrendingUp, MapPin } from "lucide-react";
 import { format, differenceInMinutes, startOfDay, endOfDay, parseISO } from "date-fns";
 import { useMemo } from "react";
 
@@ -256,7 +257,7 @@ export default function TimelineView({ projectId }: { projectId: number }) {
                         </div>
 
                         {/* Event Details */}
-                        <div className="flex items-center gap-4 px-3 text-xs">
+                        <div className="flex items-center gap-4 px-3 text-xs flex-wrap">
                           <span className={`px-2 py-0.5 rounded border font-medium ${
                             EVENT_TYPE_COLORS[event.type as keyof typeof EVENT_TYPE_COLORS] || EVENT_TYPE_COLORS.Meeting
                           }`}>
@@ -268,6 +269,17 @@ export default function TimelineView({ projectId }: { projectId: number }) {
                               {format(startTime, "HH:mm")} - {format(endTime, "HH:mm")}
                             </span>
                           </div>
+                          {event.offsetPercent && event.offsetPercent > 0 && event.latitude && event.longitude && (
+                            <a
+                              href={`https://www.google.com/maps?q=${event.latitude},${event.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-auto flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
+                            >
+                              <MapPin className="w-3 h-3" />
+                              <span>View Map</span>
+                            </a>
+                          )}
                         </div>
                       </div>
                     );
