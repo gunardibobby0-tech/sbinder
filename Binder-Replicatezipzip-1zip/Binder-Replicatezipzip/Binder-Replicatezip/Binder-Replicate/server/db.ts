@@ -7,6 +7,8 @@ const { Pool } = pkg;
 // import ws from "ws";
 import * as schema from "@shared/schema";
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import path from 'path';
 
 // neonConfig.webSocketConstructor = ws;
 
@@ -18,3 +20,15 @@ if (!process.env.DATABASE_URL) {
 
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle({ client: pool, schema });
+
+// Run migrations on startup
+(async () => {
+  try {
+    const migrationsFolder = path.resolve(process.cwd(), 'migrations');
+    await migrate(db, { migrationsFolder });
+    console.log('✓ Database migrations completed');
+  } catch (err) {
+    console.error('Migration error:', err);
+    // Don't throw - let server continue even if migrations fail (they might already be applied)
+  }
+})();
