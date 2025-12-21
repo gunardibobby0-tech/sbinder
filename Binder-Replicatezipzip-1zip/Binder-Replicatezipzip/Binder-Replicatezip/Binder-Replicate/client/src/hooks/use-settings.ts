@@ -4,6 +4,7 @@ import { z } from "zod";
 const settingsSchema = z.object({
   openaiKey: z.string().optional(),
   preferredModel: z.string().optional(),
+  currency: z.enum(["IDR", "USD"]).optional(),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

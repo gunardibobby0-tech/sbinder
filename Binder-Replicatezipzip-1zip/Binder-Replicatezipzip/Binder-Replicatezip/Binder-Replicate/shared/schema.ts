@@ -76,6 +76,7 @@ export const userSettings = pgTable("user_settings", {
   userId: text("user_id").notNull().unique(),
   openrouterToken: text("openrouter_token"), // Optional: user's own OpenRouter API key
   preferredModel: text("preferred_model").default("meta-llama/llama-3.3-70b-instruct"), // Selected OpenRouter model
+  currency: text("currency").default("IDR"), // Default currency for budgeting (IDR or USD)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -126,7 +127,7 @@ export const budgets = pgTable("budgets", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull().unique(),
   totalBudget: text("total_budget").notNull(), // e.g., "500000" for $500k
-  currency: text("currency").default("USD"),
+  currency: text("currency").default("IDR"), // Default currency changed to IDR
   contingency: text("contingency").default("10"), // 10% contingency
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
