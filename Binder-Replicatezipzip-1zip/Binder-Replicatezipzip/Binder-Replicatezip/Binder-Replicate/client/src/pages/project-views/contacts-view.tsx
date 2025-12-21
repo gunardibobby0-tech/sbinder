@@ -96,7 +96,7 @@ export default function ContactsView({ projectId }: { projectId: number }) {
             }`}
           >
             <UserCheck className="w-4 h-4 inline mr-2" />
-            Cast
+            Cast (Roles & Characters)
           </button>
           <button
             onClick={() => { setActiveTab("crew"); setSearch(""); }}

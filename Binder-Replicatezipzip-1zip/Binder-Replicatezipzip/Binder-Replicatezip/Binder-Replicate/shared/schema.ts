@@ -28,6 +28,27 @@ export const documents = pgTable("documents", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const crewMaster = pgTable("crew_master", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  title: text("title").notNull(), // Director, Actor, Producer, etc.
+  department: text("department"), // Camera, Acting, Production, etc.
+  email: text("email"),
+  phone: text("phone"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const cast = pgTable("cast", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  role: text("role").notNull(), // Character name or crew role
+  roleType: text("role_type").notNull(), // "character" or "crew"
+  crewMasterId: integer("crew_master_id"), // Links to actual talent (optional - can be unassigned)
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull(),
@@ -175,6 +196,8 @@ export const documentVersions = pgTable("document_versions", {
 
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true });
 export const insertDocumentSchema = createInsertSchema(documents).omit({ id: true, createdAt: true });
+export const insertCrewMasterSchema = createInsertSchema(crewMaster).omit({ id: true, createdAt: true });
+export const insertCastSchema = createInsertSchema(cast).omit({ id: true, createdAt: true });
 export const insertContactSchema = createInsertSchema(contacts).omit({ id: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true });
 export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({ id: true, createdAt: true, updatedAt: true });
@@ -196,6 +219,12 @@ export type InsertProject = z.infer<typeof insertProjectSchema>;
 
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+
+export type CrewMaster = typeof crewMaster.$inferSelect;
+export type InsertCrewMaster = z.infer<typeof insertCrewMasterSchema>;
+
+export type Cast = typeof cast.$inferSelect;
+export type InsertCast = z.infer<typeof insertCastSchema>;
 
 export type Contact = typeof contacts.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
