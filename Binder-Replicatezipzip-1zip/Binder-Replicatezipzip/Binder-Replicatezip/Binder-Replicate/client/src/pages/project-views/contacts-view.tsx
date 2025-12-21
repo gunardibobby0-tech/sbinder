@@ -611,7 +611,7 @@ function EditCrewMasterInlineDialog({ member, onClose }: { member: CrewMaster; o
                 <FormItem>
                   <FormLabel className="text-xs">Department</FormLabel>
                   <FormControl>
-                    <Input {...field} className="bg-black/20 border-white/10 text-sm" value={field.value ?? ""} />
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || "")} />
                   </FormControl>
                 </FormItem>
               )}

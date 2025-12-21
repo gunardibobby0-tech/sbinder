@@ -60,8 +60,13 @@ export function ScheduleDetailDialog({
 
   const handleSaveChanges = () => {
     if (event.id && projectId) {
-      const startTime = editData.startTime instanceof Date ? editData.startTime.toISOString() : (editData.startTime || event.startTime);
-      const endTime = editData.endTime instanceof Date ? editData.endTime.toISOString() : (editData.endTime || event.endTime);
+      const getTimeString = (value: any, fallback: any): string => {
+        if (!value) return typeof fallback === 'string' ? fallback : new Date(fallback).toISOString();
+        if (value instanceof Date) return value.toISOString();
+        return value;
+      };
+      const startTime = getTimeString(editData.startTime, event.startTime);
+      const endTime = getTimeString(editData.endTime, event.endTime);
       
       updateEvent(
         {
@@ -69,11 +74,11 @@ export function ScheduleDetailDialog({
           eventId: event.id,
           data: {
             title: editData.title || event.title,
-            description: editData.description || event.description,
+            description: editData.description ?? event.description,
             latitude: editData.latitude,
             longitude: editData.longitude,
-            startTime,
-            endTime,
+            startTime: startTime as string,
+            endTime: endTime as string,
           },
         },
         {
@@ -156,7 +161,7 @@ export function ScheduleDetailDialog({
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Location Notes</label>
                 <Textarea
-                  value={editData.description || event.description || ""}
+                  value={(editData.description ?? event.description) || ""}
                   onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                   className="bg-black/20 border-white/10 text-white mt-1 resize-none"
                   rows={2}

@@ -1,23 +1,71 @@
-import { useEvents } from "@/hooks/use-events";
+import { useEvents, useCreateEvent, useDeleteEvent } from "@/hooks/use-events";
 import { useCrew, useCrewAssignments } from "@/hooks/use-crew";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { ScheduleDetailDialog } from "@/components/schedule-detail-dialog";
 import { CrewAvailabilityCalendar } from "@/components/crew-availability-calendar";
 import { CallSheetGenerator } from "@/components/call-sheet-generator";
-import { Loader2, Calendar, Clock, MapPin, Users } from "lucide-react";
+import { Loader2, Calendar, Clock, MapPin, Users, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import type { Event } from "@shared/schema";
+
+const createEventSchema = z.object({
+  title: z.string().min(1, "Event title required"),
+  type: z.enum(["Shoot", "Meeting", "Scout"]),
+  startTime: z.string().min(1, "Start time required"),
+  endTime: z.string().min(1, "End time required"),
+  description: z.string().optional(),
+});
 
 export default function ScheduleView({ projectId }: { projectId: number }) {
   const { data: events, isLoading } = useEvents(projectId);
   const { data: crew } = useCrew(projectId);
   const { data: assignments = [] } = useCrewAssignments(projectId);
+  const { mutate: createEvent, isPending: isCreating } = useCreateEvent();
+  const { mutate: deleteEvent, isPending: isDeleting } = useDeleteEvent();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  
+  const form = useForm({
+    resolver: zodResolver(createEventSchema),
+    defaultValues: {
+      title: "",
+      type: "Shoot" as const,
+      startTime: "",
+      endTime: "",
+      description: "",
+    },
+  });
+
+  const onCreateEvent = (data: z.infer<typeof createEventSchema>) => {
+    createEvent(
+      {
+        projectId,
+        title: data.title,
+        type: data.type,
+        startTime: new Date(data.startTime).toISOString(),
+        endTime: new Date(data.endTime).toISOString(),
+        description: data.description,
+      },
+      {
+        onSuccess: () => {
+          setCreateDialogOpen(false);
+          form.reset();
+        },
+      }
+    );
+  };
 
   if (isLoading) return <div className="p-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>;
 
@@ -28,6 +76,100 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
           <h2 className="text-xl font-display font-bold text-white">Production Schedule</h2>
           <p className="text-sm text-muted-foreground mt-1">Manage your shoots, scouts, and meetings</p>
         </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
+              <Plus className="w-4 h-4" />
+              New Event
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-[#1c2128] border-white/10 text-white">
+            <DialogHeader>
+              <DialogTitle>Create Event</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onCreateEvent)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="bg-black/20 border-white/10" placeholder="e.g., Day 1 - Interior Scenes" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-black/20 border-white/10">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-[#1c2128] border-white/10">
+                          <SelectItem value="Shoot">Shoot</SelectItem>
+                          <SelectItem value="Meeting">Meeting</SelectItem>
+                          <SelectItem value="Scout">Scout</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="startTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Time</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="datetime-local" className="bg-black/20 border-white/10" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="endTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Time</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="datetime-local" className="bg-black/20 border-white/10" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location/Notes (Optional)</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="bg-black/20 border-white/10" placeholder="Studio, beach, etc." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" disabled={isCreating} className="w-full bg-primary hover:bg-primary/90">
+                  Create Event
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "calendar")} className="w-full">
@@ -112,6 +254,20 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                         }}
                       >
                         View Details
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (event.id && confirm("Delete this event?")) {
+                            deleteEvent(event.id);
+                          }
+                        }}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                       <CallSheetGenerator projectId={projectId} event={event} crew={crew} />
                     </div>
