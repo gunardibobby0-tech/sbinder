@@ -116,7 +116,7 @@ export async function extractScriptData(
 ): Promise<{
   scriptContent: string;
   cast: Array<{ name: string; role: string; roleType: "character" | "crew" }>;
-  crew: Array<{ name: string; role: string }>;
+  crew: Array<{ name: string; role: string; department?: string }>;
   schedule: Array<{ title: string; description: string; duration: number }>;
 }> {
   const dateRangeInfo = dateRange ? `\nProduction Date Range: From ${dateRange.startDate} to ${dateRange.endDate}` : '';
@@ -134,6 +134,8 @@ EXTRACTION INSTRUCTIONS:
 1. Extract the main script content (narrative, dialogue, scene descriptions)
 2. Extract CHARACTER CAST ONLY - character names that appear in the script
 3. Suggest CREW POSITIONS as production roles needed (not actual people - these become master data templates)
+   - Include the department/discipline for each crew position
+   - Map positions to standard departments: Direction, Camera, Lighting, Sound, Production, Grip, Art, Makeup, VFX, etc.
 4. Extract production schedule events with realistic durations${dateRangeInstruction}${daysInstruction}
 
 EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
@@ -148,7 +150,8 @@ EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
   "crew": [
     {
       "name": "Job title (e.g., 'Director', 'Cinematographer', 'Sound Mixer', 'Gaffer')",
-      "role": "Key responsibilities (e.g., 'Direct actors and oversee creative vision' or 'Manage camera work and cinematography')"
+      "role": "Key responsibilities (e.g., 'Direct actors and oversee creative vision' or 'Manage camera work and cinematography')",
+      "department": "Department category (e.g., 'Direction', 'Camera', 'Sound', 'Lighting', 'Production', 'Art')"
     }
   ],
   "schedule": [

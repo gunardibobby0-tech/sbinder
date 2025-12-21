@@ -315,7 +315,7 @@ export async function registerRoutes(
           storage.createCrewMaster({
             name: c.name, // Job title like "Director"
             title: c.name, // Job title
-            department: c.name, // Can be refined later
+            department: c.department || c.name, // Use provided department or default to job title
             notes: c.role // Responsibilities
           })
         )
