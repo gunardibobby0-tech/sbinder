@@ -43,16 +43,20 @@ export function useAutoSuggest() {
       projectId,
       scriptContent,
       model,
+      dateRange,
+      daysOfWeek,
     }: {
       projectId: number;
       scriptContent: string;
       model?: string;
+      dateRange?: { startDate: string; endDate: string };
+      daysOfWeek?: string[];
     }) => {
       const response = await fetch(`/api/projects/${projectId}/auto-suggest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ scriptContent, model }),
+        body: JSON.stringify({ scriptContent, model, dateRange, daysOfWeek }),
       });
 
       if (!response.ok) {

@@ -267,10 +267,10 @@ export async function registerRoutes(
     }
   });
 
-  // === Auto-Suggest Cast Only from Script ===
+  // === Auto-Suggest Cast and Crew from Script ===
   app.post("/api/projects/:projectId/auto-suggest", async (req, res) => {
     try {
-      const { scriptContent, model } = req.body;
+      const { scriptContent, model, dateRange, daysOfWeek } = req.body;
       const projectId = Number(req.params.projectId);
       const userId = (req.user as any)?.id || "user_1";
 
@@ -283,32 +283,49 @@ export async function registerRoutes(
       const selectedModel = model || userSettings?.preferredModel || "meta-llama/llama-3.3-70b-instruct";
 
       // Extract cast, crew, and schedule from script
-      const suggestions = await extractScriptData(scriptContent, selectedModel);
+      const suggestions = await extractScriptData(scriptContent, selectedModel, dateRange, daysOfWeek);
 
-      // Get existing contacts to check for duplicates
-      const existingContacts = await storage.getContacts(projectId);
-      const existingNames = new Set(existingContacts.map(c => c.name.toLowerCase()));
+      // Get existing cast to check for duplicates
+      const existingCast = await storage.getCast(projectId);
+      const existingCastNames = new Set(existingCast.map(c => c.role.toLowerCase()));
+      
+      // Get existing crew master to check for duplicates
+      const existingCrewMaster = await storage.getCrewMaster();
+      const existingCrewNames = new Set(existingCrewMaster.map(c => c.name.toLowerCase()));
 
-      // Filter out duplicates - CAST ONLY
-      const newCast = suggestions.cast.filter(c => !existingNames.has(c.name.toLowerCase()));
+      // Filter out duplicates
+      const newCastSuggestions = suggestions.cast.filter(c => !existingCastNames.has(c.name.toLowerCase()));
+      const newCrewSuggestions = suggestions.crew.filter(c => !existingCrewNames.has(c.name.toLowerCase()));
 
-      // Create CAST contacts only (no crew)
+      // Create CAST entries (characters from script)
       const createdCast = await Promise.all(
-        newCast.map(c =>
-          storage.createContact({
+        newCastSuggestions.map(c =>
+          storage.createCast({
             projectId,
-            name: c.name,
-            role: c.role,
-            category: "Cast"
+            role: c.name,
+            roleType: "character",
+            notes: c.role // Store character description in notes
+          })
+        )
+      );
+
+      // Create CREW MASTER entries (job positions as templates)
+      const createdCrewMaster = await Promise.all(
+        newCrewSuggestions.map(c =>
+          storage.createCrewMaster({
+            name: c.name, // Job title like "Director"
+            title: c.name, // Job title
+            department: c.department || c.name, // Use provided department or default to job title
+            notes: c.role // Responsibilities
           })
         )
       );
 
       // Create schedule events
-      const now = new Date();
+      const baseDate = dateRange?.startDate ? new Date(dateRange.startDate) : new Date();
       const createdEvents = await Promise.all(
         suggestions.schedule.map((s, idx) => {
-          const startTime = new Date(now.getTime() + idx * 24 * 60 * 60 * 1000);
+          const startTime = new Date(baseDate.getTime() + idx * 24 * 60 * 60 * 1000);
           const endTime = new Date(startTime.getTime() + s.duration * 60 * 1000);
           return storage.createEvent({
             projectId,
@@ -323,11 +340,11 @@ export async function registerRoutes(
 
       res.json({
         cast: createdCast,
-        crew: [],
+        crew: createdCrewMaster,
         events: createdEvents,
         duplicatesSkipped: {
-          cast: suggestions.cast.length - newCast.length,
-          crew: 0
+          cast: suggestions.cast.length - newCastSuggestions.length,
+          crew: suggestions.crew.length - newCrewSuggestions.length
         }
       });
     } catch (err) {
@@ -339,6 +356,69 @@ export async function registerRoutes(
         message: err instanceof Error ? err.message : "Failed to auto-suggest"
       });
     }
+  });
+
+  // === Cast ===
+  app.get("/api/projects/:projectId/cast", async (req, res) => {
+    const cast = await storage.getCast(Number(req.params.projectId));
+    res.json(cast);
+  });
+
+  app.post("/api/projects/:projectId/cast", async (req, res) => {
+    try {
+      const input = req.body;
+      const castItem = await storage.createCast({
+        ...input,
+        projectId: Number(req.params.projectId)
+      });
+      res.status(201).json(castItem);
+    } catch (err) {
+      res.status(400).json({ message: err instanceof Error ? err.message : "Failed to create cast" });
+    }
+  });
+
+  app.put("/api/projects/:projectId/cast/:castId", async (req, res) => {
+    try {
+      const castItem = await storage.updateCast(Number(req.params.castId), req.body);
+      res.json(castItem);
+    } catch (err) {
+      res.status(400).json({ message: err instanceof Error ? err.message : "Failed to update cast" });
+    }
+  });
+
+  app.delete("/api/projects/:projectId/cast/:castId", async (req, res) => {
+    await storage.deleteCast(Number(req.params.castId));
+    res.sendStatus(204);
+  });
+
+  // === Crew Master ===
+  app.get("/api/crew-master", async (req, res) => {
+    const crewMaster = await storage.getCrewMaster();
+    res.json(crewMaster);
+  });
+
+  app.post("/api/crew-master", async (req, res) => {
+    try {
+      const input = req.body;
+      const talent = await storage.createCrewMaster(input);
+      res.status(201).json(talent);
+    } catch (err) {
+      res.status(400).json({ message: err instanceof Error ? err.message : "Failed to create crew master" });
+    }
+  });
+
+  app.put("/api/crew-master/:crewMasterId", async (req, res) => {
+    try {
+      const talent = await storage.updateCrewMaster(Number(req.params.crewMasterId), req.body);
+      res.json(talent);
+    } catch (err) {
+      res.status(400).json({ message: err instanceof Error ? err.message : "Failed to update crew master" });
+    }
+  });
+
+  app.delete("/api/crew-master/:crewMasterId", async (req, res) => {
+    await storage.deleteCrewMaster(Number(req.params.crewMasterId));
+    res.sendStatus(204);
   });
 
   // === Contacts ===
@@ -387,6 +467,21 @@ export async function registerRoutes(
         projectId: Number(req.params.projectId)
       });
       res.status(201).json(event);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.events.update.path, async (req, res) => {
+    
+    try {
+      const eventId = Number(req.params.id);
+      const input = req.body;
+      const event = await storage.updateEvent(eventId, input);
+      res.json(event);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });

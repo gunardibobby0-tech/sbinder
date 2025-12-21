@@ -1,8 +1,10 @@
 import { 
-  users, projects, documents, contacts, events, userSettings, crew, crewAssignments, equipment, equipmentAssignments, budgets, budgetLineItems, shotList, locations, locationGallery, documentVersions,
+  users, projects, documents, cast, crewMaster, contacts, events, userSettings, crew, crewAssignments, equipment, equipmentAssignments, budgets, budgetLineItems, shotList, locations, locationGallery, documentVersions,
   type User,
   type Project, type InsertProject,
   type Document, type InsertDocument,
+  type Cast, type InsertCast,
+  type CrewMaster, type InsertCrewMaster,
   type Contact, type InsertContact,
   type Event, type InsertEvent,
   type UserSettings, type InsertUserSettings,
@@ -35,6 +37,18 @@ export interface IStorage {
   updateDocument(id: number, updates: Partial<InsertDocument>): Promise<Document>;
   deleteDocument(id: number): Promise<void>;
 
+  // Cast
+  getCast(projectId: number): Promise<(Cast & { crewMaster?: CrewMaster })[]>;
+  createCast(castData: InsertCast): Promise<Cast>;
+  updateCast(id: number, updates: Partial<InsertCast>): Promise<Cast>;
+  deleteCast(id: number): Promise<void>;
+
+  // Crew Master
+  getCrewMaster(): Promise<CrewMaster[]>;
+  createCrewMaster(talent: InsertCrewMaster): Promise<CrewMaster>;
+  updateCrewMaster(id: number, updates: Partial<InsertCrewMaster>): Promise<CrewMaster>;
+  deleteCrewMaster(id: number): Promise<void>;
+
   // Contacts
   getContacts(projectId: number): Promise<Contact[]>;
   createContact(contact: InsertContact): Promise<Contact>;
@@ -43,6 +57,7 @@ export interface IStorage {
   // Events
   getEvents(projectId: number): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
+  updateEvent(id: number, data: Partial<Event>): Promise<Event>;
   deleteEvent(id: number): Promise<void>;
 
   // Settings
@@ -191,6 +206,50 @@ export class DatabaseStorage implements IStorage {
     await db.delete(contacts).where(eq(contacts.id, id));
   }
 
+  // Cast
+  async getCast(projectId: number): Promise<(Cast & { crewMaster?: CrewMaster })[]> {
+    return await db.select().from(cast).where(eq(cast.projectId, projectId));
+  }
+
+  async createCast(castData: InsertCast): Promise<Cast> {
+    const [newCast] = await db.insert(cast).values(castData).returning();
+    return newCast;
+  }
+
+  async updateCast(id: number, updates: Partial<InsertCast>): Promise<Cast> {
+    const [updated] = await db.update(cast)
+      .set(updates)
+      .where(eq(cast.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCast(id: number): Promise<void> {
+    await db.delete(cast).where(eq(cast.id, id));
+  }
+
+  // Crew Master
+  async getCrewMaster(): Promise<CrewMaster[]> {
+    return await db.select().from(crewMaster);
+  }
+
+  async createCrewMaster(talent: InsertCrewMaster): Promise<CrewMaster> {
+    const [newTalent] = await db.insert(crewMaster).values(talent).returning();
+    return newTalent;
+  }
+
+  async updateCrewMaster(id: number, updates: Partial<InsertCrewMaster>): Promise<CrewMaster> {
+    const [updated] = await db.update(crewMaster)
+      .set(updates)
+      .where(eq(crewMaster.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCrewMaster(id: number): Promise<void> {
+    await db.delete(crewMaster).where(eq(crewMaster.id, id));
+  }
+
   // Events
   async getEvents(projectId: number): Promise<Event[]> {
     return await db.select().from(events).where(eq(events.projectId, projectId));
@@ -199,6 +258,14 @@ export class DatabaseStorage implements IStorage {
   async createEvent(event: InsertEvent): Promise<Event> {
     const [newEvent] = await db.insert(events).values(event).returning();
     return newEvent;
+  }
+
+  async updateEvent(id: number, data: Partial<Event>): Promise<Event> {
+    const [updated] = await db.update(events)
+      .set(data)
+      .where(eq(events.id, id))
+      .returning();
+    return updated;
   }
 
   async deleteEvent(id: number): Promise<void> {

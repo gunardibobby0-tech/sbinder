@@ -22,14 +22,15 @@ args = "dev-server"
 name = "dev-server"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd \"/home/runner/workspace/Binder-Replicatezipzip-1zip/Binder-Replicatezipzip/Binder-Replicatezip/Binder-Replicate\" && npm run dev"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd ./Binder-Replicatezipzip-1zip/Binder-Replicatezipzip/Binder-Replicatezip/Binder-Replicate && npm run dev"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
+exposeLocalhost = true

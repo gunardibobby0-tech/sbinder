@@ -11,7 +11,7 @@ async function callChatAPI(
     throw new Error("API key not configured. Set OPENAI_API_KEY or OPENROUTER_API_KEY.");
   }
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,

@@ -195,6 +195,16 @@ export const api = {
         400: errorSchemas.validation,
       },
     },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/projects/:projectId/events/:id',
+      input: insertEventSchema.partial(),
+      responses: {
+        200: z.custom<typeof events.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
     delete: {
       method: 'DELETE' as const,
       path: '/api/events/:id',

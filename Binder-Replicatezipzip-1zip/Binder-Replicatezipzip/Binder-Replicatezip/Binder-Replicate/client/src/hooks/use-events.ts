@@ -21,3 +21,24 @@ export function useCreateEvent() {
     },
   });
 }
+
+export function useUpdateEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      eventId,
+      data,
+    }: {
+      projectId: number;
+      eventId: number;
+      data: Partial<Event>;
+    }) => {
+      const res = await apiRequest("PUT", `/api/projects/${projectId}/events/${eventId}`, data);
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${variables.projectId}/events`] });
+    },
+  });
+}

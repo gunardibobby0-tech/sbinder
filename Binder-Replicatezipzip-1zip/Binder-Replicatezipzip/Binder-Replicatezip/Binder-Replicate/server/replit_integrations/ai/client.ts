@@ -110,33 +110,50 @@ export async function callOpenRouter(
 
 export async function extractScriptData(
   documentContent: string,
-  model: string = 'meta-llama/llama-3.3-70b-instruct'
+  model: string = 'meta-llama/llama-3.3-70b-instruct',
+  dateRange?: { startDate: string; endDate: string },
+  daysOfWeek?: string[]
 ): Promise<{
   scriptContent: string;
-  cast: Array<{ name: string; role: string }>;
-  crew: Array<{ name: string; role: string }>;
+  cast: Array<{ name: string; role: string; roleType: "character" | "crew" }>;
+  crew: Array<{ name: string; role: string; department?: string }>;
   schedule: Array<{ title: string; description: string; duration: number }>;
 }> {
+  const dateRangeInfo = dateRange ? `\nProduction Date Range: From ${dateRange.startDate} to ${dateRange.endDate}` : '';
+  const daysInfo = daysOfWeek && daysOfWeek.length > 0 ? `\nProduction Days: ${daysOfWeek.join(', ')}` : '';
+  
+  const dateRangeInstruction = dateRange ? '\n5. Schedule all events within the provided date range' : '';
+  const daysInstruction = daysOfWeek && daysOfWeek.length > 0 ? '\n6. Only schedule events on the specified production days (Monday-Sunday)' : '';
+  
   const prompt = `You are a professional film and TV production expert. Your task is to analyze a screenplay, script, or production document and extract key production data.
 
 DOCUMENT TO ANALYZE:
-${documentContent}
+${documentContent}${dateRangeInfo}${daysInfo}
 
 EXTRACTION INSTRUCTIONS:
 1. Extract the main script content (narrative, dialogue, scene descriptions)
-2. Identify all cast members (characters/actors with their roles) - CAST ONLY, NO CREW
-3. Extract production schedule events with realistic durations
+2. Extract CHARACTER CAST ONLY - character names that appear in the script
+3. Suggest CREW POSITIONS as production roles needed (not actual people - these become master data templates)
+   - Include the department/discipline for each crew position
+   - Map positions to standard departments: Direction, Camera, Lighting, Sound, Production, Grip, Art, Makeup, VFX, etc.
+4. Extract production schedule events with realistic durations${dateRangeInstruction}${daysInstruction}
 
 EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
 {
   "scriptContent": "The full screenplay or narrative content from the document. Include all dialogue, scene directions, and narrative text. If no script found, use a brief summary of the document.",
   "cast": [
     {
-      "name": "Character name or Actor name",
-      "role": "Character role (e.g., 'Lead', 'Detective', 'Female Lead') or Actor character"
+      "name": "Character name ONLY (e.g., 'John', 'Detective Sarah', 'The Villain')",
+      "role": "Brief character description or type (e.g., 'Lead', 'Detective', 'Victim', 'Narrator')"
     }
   ],
-  "crew": [],
+  "crew": [
+    {
+      "name": "Job title (e.g., 'Director', 'Cinematographer', 'Sound Mixer', 'Gaffer')",
+      "role": "Key responsibilities (e.g., 'Direct actors and oversee creative vision' or 'Manage camera work and cinematography')",
+      "department": "Department category (e.g., 'Direction', 'Camera', 'Sound', 'Lighting', 'Production', 'Art')"
+    }
+  ],
   "schedule": [
     {
       "title": "Event or shooting day title (e.g., 'Day 1: Interior Scenes', 'Location Scout')",
@@ -148,14 +165,16 @@ EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
 
 IMPORTANT RULES:
 - Return ONLY the JSON object, no additional text, markdown, or explanations
-- CAST ONLY: Extract only cast/characters. Do NOT extract crew members.
-- crew field should ALWAYS be empty array []
+- CAST = Character names from script (what to film), will be created as cast entries with roleType "character"
+- CREW = Job positions needed (Director, DP, etc.), will be stored as crew master templates for talent assignment
+- crew field should contain 3-8 essential crew positions based on the production needs (never empty)
 - All other fields are required. If information is not found, use appropriate defaults:
   - scriptContent: empty string ""
-  - cast: empty array []
-  - crew: empty array [] (ALWAYS)
-  - schedule: empty array []
-- For cast, include complete names and clear role descriptions
+  - cast: array of character names extracted from script
+  - crew: array of 3-8 suggested crew positions (never empty if production type is clear)
+  - schedule: empty array [] if no schedule found
+- For cast, use ONLY character names from the script, not actor names
+- For crew, use actual job titles (Director, Cinematographer, Sound Mixer, Gaffer, etc.)
 - Duration should be in minutes (480 = 8 hours for a typical shooting day)
 - Ensure the JSON is valid and properly formatted
 - Extract as much detail as possible from the provided document`;
