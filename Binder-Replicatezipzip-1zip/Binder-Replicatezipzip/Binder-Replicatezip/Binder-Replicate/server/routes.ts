@@ -354,6 +354,69 @@ export async function registerRoutes(
     }
   });
 
+  // === Cast ===
+  app.get("/api/projects/:projectId/cast", async (req, res) => {
+    const cast = await storage.getCast(Number(req.params.projectId));
+    res.json(cast);
+  });
+
+  app.post("/api/projects/:projectId/cast", async (req, res) => {
+    try {
+      const input = req.body;
+      const castItem = await storage.createCast({
+        ...input,
+        projectId: Number(req.params.projectId)
+      });
+      res.status(201).json(castItem);
+    } catch (err) {
+      res.status(400).json({ message: err instanceof Error ? err.message : "Failed to create cast" });
+    }
+  });
+
+  app.put("/api/projects/:projectId/cast/:castId", async (req, res) => {
+    try {
+      const castItem = await storage.updateCast(Number(req.params.castId), req.body);
+      res.json(castItem);
+    } catch (err) {
+      res.status(400).json({ message: err instanceof Error ? err.message : "Failed to update cast" });
+    }
+  });
+
+  app.delete("/api/projects/:projectId/cast/:castId", async (req, res) => {
+    await storage.deleteCast(Number(req.params.castId));
+    res.sendStatus(204);
+  });
+
+  // === Crew Master ===
+  app.get("/api/crew-master", async (req, res) => {
+    const crewMaster = await storage.getCrewMaster();
+    res.json(crewMaster);
+  });
+
+  app.post("/api/crew-master", async (req, res) => {
+    try {
+      const input = req.body;
+      const talent = await storage.createCrewMaster(input);
+      res.status(201).json(talent);
+    } catch (err) {
+      res.status(400).json({ message: err instanceof Error ? err.message : "Failed to create crew master" });
+    }
+  });
+
+  app.put("/api/crew-master/:crewMasterId", async (req, res) => {
+    try {
+      const talent = await storage.updateCrewMaster(Number(req.params.crewMasterId), req.body);
+      res.json(talent);
+    } catch (err) {
+      res.status(400).json({ message: err instanceof Error ? err.message : "Failed to update crew master" });
+    }
+  });
+
+  app.delete("/api/crew-master/:crewMasterId", async (req, res) => {
+    await storage.deleteCrewMaster(Number(req.params.crewMasterId));
+    res.sendStatus(204);
+  });
+
   // === Contacts ===
   app.get(api.contacts.list.path, async (req, res) => {
     
