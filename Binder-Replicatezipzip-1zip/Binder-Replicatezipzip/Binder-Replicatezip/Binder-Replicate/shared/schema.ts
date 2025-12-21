@@ -46,6 +46,8 @@ export const events = pgTable("events", {
   endTime: timestamp("end_time").notNull(),
   type: text("type").notNull(), // Shoot, Scout, Meeting
   description: text("description"),
+  latitude: text("latitude"),
+  longitude: text("longitude"),
 });
 
 export const userSettings = pgTable("user_settings", {

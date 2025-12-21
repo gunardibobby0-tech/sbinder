@@ -9,7 +9,9 @@ import type { Event, Crew, CrewAssignment } from "@shared/schema";
 import { Clock, MapPin, Users, Plus, Trash2, Briefcase, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { useCrew, useCrewAssignments, useCreateCrewAssignment, useDeleteCrewAssignment, useCheckCrewConflicts } from "@/hooks/use-crew";
+import { useUpdateEvent } from "@/hooks/use-events";
 import { useQueryClient } from "@tanstack/react-query";
+import { LocationPicker } from "@/components/location-picker";
 
 interface ScheduleDetailDialogProps {
   event: Event | null;
@@ -27,22 +29,75 @@ export function ScheduleDetailDialog({
   const [isEditing, setIsEditing] = useState(false);
   const [assigningCrew, setAssigningCrew] = useState(false);
   const [conflictWarnings, setConflictWarnings] = useState<Record<number, Array<{ eventTitle: string; startTime: Date; endTime: Date }>>>({});
+  const [editData, setEditData] = useState<Partial<Event>>({});
+  
   const { data: crew = [], isLoading: crewLoading } = useCrew(projectId || 0);
   const { data: assignments = [], isLoading: assignmentsLoading } = useCrewAssignments(projectId || 0);
   const { mutate: assignCrew, isPending: isAssigning } = useCreateCrewAssignment();
   const { mutate: deleteCrew, isPending: isDeleting } = useDeleteCrewAssignment();
   const { mutate: checkConflicts } = useCheckCrewConflicts();
+  const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
   const queryClient = useQueryClient();
 
   const eventAssignments = assignments.filter(a => a.eventId === event?.id);
 
   if (!event) return null;
 
+  const startTime = new Date(event.startTime);
+  const endTime = new Date(event.endTime);
+
+  const handleStartEdit = () => {
+    setEditData({
+      title: event.title,
+      description: event.description,
+      latitude: event.latitude,
+      longitude: event.longitude,
+      startTime: event.startTime,
+      endTime: event.endTime,
+    });
+    setIsEditing(true);
+  };
+
+  const handleSaveChanges = () => {
+    if (event.id && projectId) {
+      updateEvent(
+        {
+          projectId,
+          eventId: event.id,
+          data: {
+            title: editData.title || event.title,
+            description: editData.description || event.description,
+            latitude: editData.latitude,
+            longitude: editData.longitude,
+            startTime: editData.startTime || event.startTime,
+            endTime: editData.endTime || event.endTime,
+          },
+        },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["events", projectId] });
+            setIsEditing(false);
+          },
+        }
+      );
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#1c2128] border-white/10 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{event.title}</DialogTitle>
+          <DialogTitle className="text-2xl">
+            {isEditing ? (
+              <Input
+                value={editData.title || event.title}
+                onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                className="bg-black/20 border-white/10 text-white text-2xl"
+              />
+            ) : (
+              event.title
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
@@ -59,23 +114,77 @@ export function ScheduleDetailDialog({
 
           {/* Schedule Details */}
           <Card className="bg-black/20 border-white/10 p-4 space-y-3">
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Clock className="w-4 h-4" />
-              <div>
-                <span className="text-sm">{format(new Date(event.startTime), "EEEE, MMMM d, yyyy")}</span>
-                <span className="text-white ml-2 font-medium">
-                  {format(new Date(event.startTime), "h:mm a")} - {format(new Date(event.endTime), "h:mm a")}
-                </span>
-              </div>
-            </div>
-
-            {event.description && (
+            {isEditing ? (
+              <>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Start Date & Time</label>
+                    <Input
+                      type="datetime-local"
+                      value={format(new Date(editData.startTime || event.startTime), "yyyy-MM-dd'T'HH:mm")}
+                      onChange={(e) => setEditData({ ...editData, startTime: new Date(e.target.value) })}
+                      className="bg-black/20 border-white/10 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">End Date & Time</label>
+                    <Input
+                      type="datetime-local"
+                      value={format(new Date(editData.endTime || event.endTime), "yyyy-MM-dd'T'HH:mm")}
+                      onChange={(e) => setEditData({ ...editData, endTime: new Date(e.target.value) })}
+                      className="bg-black/20 border-white/10 text-white mt-1"
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
               <div className="flex items-center gap-3 text-muted-foreground">
-                <MapPin className="w-4 h-4" />
-                <span className="text-white">{event.description}</span>
+                <Clock className="w-4 h-4" />
+                <div>
+                  <span className="text-sm">{format(startTime, "EEEE, MMMM d, yyyy")}</span>
+                  <span className="text-white ml-2 font-medium">
+                    {format(startTime, "h:mm a")} - {format(endTime, "h:mm a")}
+                  </span>
+                </div>
               </div>
             )}
+
+            {isEditing ? (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Location Notes</label>
+                <Textarea
+                  value={editData.description || event.description || ""}
+                  onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                  className="bg-black/20 border-white/10 text-white mt-1 resize-none"
+                  rows={2}
+                />
+              </div>
+            ) : (
+              event.description && (
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-white">{event.description}</span>
+                </div>
+              )
+            )}
           </Card>
+
+          {/* Location Picker */}
+          {isEditing && (
+            <Card className="bg-black/20 border-white/10 p-4">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-primary" />
+                Location (Coordinates)
+              </h3>
+              <LocationPicker
+                latitude={editData.latitude}
+                longitude={editData.longitude}
+                onLocationChange={(lat, lng) => {
+                  setEditData({ ...editData, latitude: lat, longitude: lng });
+                }}
+              />
+            </Card>
+          )}
 
           {/* Crew Assignments Section */}
           <div className="space-y-3">
@@ -89,7 +198,7 @@ export function ScheduleDetailDialog({
                 variant="outline"
                 onClick={() => setAssigningCrew(true)}
                 className="border-primary/50 hover:border-primary text-primary hover:text-primary"
-                disabled={crew.length === 0}
+                disabled={crew.length === 0 || isEditing}
               >
                 <Plus className="w-3 h-3 mr-1" />
                 Add Crew
@@ -213,31 +322,46 @@ export function ScheduleDetailDialog({
           </div>
 
           {/* Event Notes */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Notes</label>
-            <Textarea
-              className="bg-black/20 border-white/10 text-white resize-none"
-              placeholder="Add any additional details about this schedule..."
-              defaultValue={event.description || ""}
-              disabled={!isEditing}
-              rows={3}
-            />
-          </div>
+          {!isEditing && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Notes</label>
+              <Textarea
+                className="bg-black/20 border-white/10 text-white resize-none"
+                placeholder="Add any additional details about this schedule..."
+                defaultValue={event.description || ""}
+                disabled={true}
+                rows={3}
+              />
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-4">
             <Button
               variant="ghost"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                if (isEditing) setIsEditing(false);
+                else onOpenChange(false);
+              }}
             >
-              Close
+              {isEditing ? "Cancel" : "Close"}
             </Button>
-            <Button
-              className="bg-primary hover:bg-primary/90"
-              onClick={() => setIsEditing(!isEditing)}
-            >
-              {isEditing ? "Save Changes" : "Edit Schedule"}
-            </Button>
+            {isEditing ? (
+              <Button
+                className="bg-primary hover:bg-primary/90"
+                onClick={handleSaveChanges}
+                disabled={isUpdating}
+              >
+                Save Changes
+              </Button>
+            ) : (
+              <Button
+                className="bg-primary hover:bg-primary/90"
+                onClick={handleStartEdit}
+              >
+                Edit Schedule
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

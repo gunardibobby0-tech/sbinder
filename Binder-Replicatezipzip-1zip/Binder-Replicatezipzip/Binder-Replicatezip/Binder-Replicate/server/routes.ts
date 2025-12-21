@@ -408,6 +408,21 @@ export async function registerRoutes(
     }
   });
 
+  app.put(api.events.update.path, async (req, res) => {
+    
+    try {
+      const eventId = Number(req.params.id);
+      const input = req.body;
+      const event = await storage.updateEvent(eventId, input);
+      res.json(event);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
   app.delete(api.events.delete.path, async (req, res) => {
     
     await storage.deleteEvent(Number(req.params.id));
