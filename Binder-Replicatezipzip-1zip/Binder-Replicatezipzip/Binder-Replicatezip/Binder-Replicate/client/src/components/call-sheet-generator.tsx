@@ -1,6 +1,4 @@
 import { useGenerateCallSheet } from "@/hooks/use-call-sheet";
-import { useCrewAssignments } from "@/hooks/use-crew";
-import { useEquipmentAssignments } from "@/hooks/use-equipment";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
@@ -39,9 +37,14 @@ export function CallSheetGenerator({ projectId, event, crew = [] }: CallSheetGen
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="border-white/10 hover:border-white/20">
+        <Button 
+          size="sm" 
+          variant="outline" 
+          className="border-white/10 hover:border-white/20"
+          onClick={(e) => e.stopPropagation()}
+        >
           <FileDown className="w-4 h-4 mr-2" />
-          Call Sheet (PDF)
+          Call Sheet
         </Button>
       </DialogTrigger>
       <DialogContent className="bg-[#1c2128] border-white/10 text-white max-w-md">

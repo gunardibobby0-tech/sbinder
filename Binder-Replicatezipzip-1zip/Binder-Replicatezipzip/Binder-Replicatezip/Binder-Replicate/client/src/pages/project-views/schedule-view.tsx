@@ -192,65 +192,73 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                 return (
                   <Card 
                     key={event.id} 
-                    className="bg-card border-white/5 p-6 flex flex-col md:flex-row md:items-center gap-6 hover:border-primary/50 hover:bg-card/80 transition-all cursor-pointer"
-                    onClick={() => {
-                      setSelectedEvent(event);
-                      setDetailDialogOpen(true);
-                    }}
+                    className="bg-gradient-to-r from-card to-card/50 border border-white/10 hover:border-primary/50 overflow-hidden"
                   >
-                    <div className="flex-shrink-0 w-16 h-16 bg-black/30 rounded-lg flex flex-col items-center justify-center border border-white/5 relative">
-                      <span className="text-xs text-muted-foreground uppercase font-bold">{format(new Date(event.startTime), "MMM")}</span>
-                      <span className="text-2xl font-bold text-white">{format(new Date(event.startTime), "d")}</span>
-                      {eventCrewCount > 0 && (
-                        <div className="absolute -top-2 -right-2 bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                          {eventCrewCount}
+                    {/* Date Badge & Title Header */}
+                    <div className="flex gap-4 p-6 pb-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg flex flex-col items-center justify-center border border-primary/30 relative">
+                          <span className="text-xs text-primary uppercase font-bold">{format(new Date(event.startTime), "MMM")}</span>
+                          <span className="text-3xl font-bold text-primary">{format(new Date(event.startTime), "d")}</span>
+                          {eventCrewCount > 0 && (
+                            <div className="absolute -top-3 -right-3 bg-primary text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg">
+                              {eventCrewCount}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                          event.type === 'Shoot' ? 'bg-red-500/20 text-red-400' :
-                          event.type === 'Meeting' ? 'bg-blue-500/20 text-blue-400' :
-                          'bg-green-500/20 text-green-400'
-                        }`}>
-                          {event.type}
-                        </span>
-                        <h3 className="text-lg font-bold text-white">{event.title}</h3>
-                        {crew && crew.length > 0 && (
-                          <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary">
-                            {crew.length} crew
-                          </span>
-                        )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5" />
-                          {format(new Date(event.startTime), "h:mm a")} - {format(new Date(event.endTime), "h:mm a")}
+                      
+                      <div className="flex-1 flex flex-col justify-center">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${
+                            event.type === 'Shoot' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                            event.type === 'Meeting' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                            'bg-green-500/20 text-green-400 border border-green-500/30'
+                          }`}>
+                            {event.type}
+                          </span>
+                          <h3 className="text-xl font-bold text-white flex-1">{event.title}</h3>
                         </div>
-                        {event.description && (
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5" />
-                            {event.description}
+                        
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1.5 text-cyan-400">
+                            <Clock className="w-4 h-4" />
+                            <span>{format(new Date(event.startTime), "h:mm a")} - {format(new Date(event.endTime), "h:mm a")}</span>
                           </div>
-                        )}
-                        {eventCrewCount > 0 && (
-                          <div className="flex items-center gap-1.5 text-primary">
-                            <Users className="w-3.5 h-3.5" />
-                            {eventCrewCount} {eventCrewCount === 1 ? 'person' : 'people'} assigned
-                          </div>
-                        )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex gap-2 items-center">
+                    {/* Details Section */}
+                    <div className="px-6 py-3 border-t border-white/5 bg-black/20">
+                      <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <div className="flex items-center gap-4">
+                          {event.description && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <MapPin className="w-4 h-4 text-amber-400" />
+                              <span className="text-sm">{event.description}</span>
+                            </div>
+                          )}
+                          {eventCrewCount > 0 && (
+                            <div className="flex items-center gap-1.5 text-primary">
+                              <Users className="w-4 h-4" />
+                              <span className="text-sm font-medium">{eventCrewCount} {eventCrewCount === 1 ? 'person' : 'people'}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="px-6 py-3 border-t border-white/5 bg-black/30 flex gap-2 justify-end">
+                      <CallSheetGenerator projectId={projectId} event={event} crew={crew} />
                       <Button 
                         variant="outline" 
                         size="sm"
-                        className="border-white/10 hover:border-primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        className="border-white/10 hover:border-primary/50 text-white hover:bg-primary/10"
+                        onClick={() => {
+                          setSelectedEvent(event);
+                          setDetailDialogOpen(true);
                         }}
                       >
                         View Details
@@ -259,8 +267,7 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                         variant="ghost"
                         size="sm"
                         className="text-red-400 hover:text-red-500 hover:bg-red-500/10"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={() => {
                           if (event.id && confirm("Delete this event?")) {
                             deleteEvent(event.id);
                           }
@@ -269,7 +276,6 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                      <CallSheetGenerator projectId={projectId} event={event} crew={crew} />
                     </div>
                   </Card>
                 );
