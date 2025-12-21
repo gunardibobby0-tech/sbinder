@@ -74,45 +74,50 @@ export function CrewAvailabilityCalendar({ projectId }: CrewAvailabilityCalendar
   return (
     <div className="space-y-6">
       {/* Calendar Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-white">Crew Availability Calendar</h3>
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-white/10 hover:border-primary"
-            onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm font-semibold text-white min-w-[150px] text-center">
-            {format(currentDate, "MMMM yyyy")}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-white/10 hover:border-primary"
-            onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+      <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-2xl font-bold text-white">Crew Availability Timeline</h3>
+            <p className="text-sm text-muted-foreground mt-1">View crew booking schedule and availability</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10"
+              onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-lg font-bold text-white min-w-[180px] text-center">
+              {format(currentDate, "MMMM yyyy")}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10"
+              onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Day Labels */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-2">
         {dayLabels.map((label) => (
-          <div key={label} className="text-xs font-bold text-muted-foreground text-center py-2">
+          <div key={label} className="text-sm font-bold text-primary text-center py-3 bg-primary/10 rounded-lg border border-primary/20">
             {label}
           </div>
         ))}
       </div>
 
       {/* Calendar Grid */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Mini Calendar View */}
-        <Card className="bg-card border-white/5 p-4">
-          <div className="grid grid-cols-7 gap-1">
+        <Card className="bg-gradient-to-br from-card to-card/50 border border-white/10 p-6 overflow-hidden">
+          <div className="grid grid-cols-7 gap-2">
             {emptyDays.map((_, idx) => (
               <div key={`empty-${idx}`} className="aspect-square" />
             ))}
@@ -120,23 +125,32 @@ export function CrewAvailabilityCalendar({ projectId }: CrewAvailabilityCalendar
               const dayKey = format(day, "yyyy-MM-dd");
               const bookedCount = crew.filter((c) => crewAvailability[c.id].has(dayKey)).length;
               const availableCount = crew.length - bookedCount;
+              const isCurrentDay = isSameDay(day, new Date());
 
               return (
                 <div
                   key={dayKey}
-                  className={`aspect-square rounded-lg border flex flex-col items-center justify-center text-xs p-1 ${
-                    isSameMonth(day, currentDate)
-                      ? bookedCount === crew.length
-                        ? "bg-red-500/20 border-red-500/50"
+                  className={`aspect-square rounded-lg border-2 flex flex-col items-center justify-center p-2 transition-all font-semibold ${
+                    !isSameMonth(day, currentDate)
+                      ? "bg-black/20 border-white/5 opacity-30"
+                      : bookedCount === crew.length
+                        ? "bg-gradient-to-br from-red-500/30 to-red-500/10 border-red-500/60 shadow-lg shadow-red-500/20"
                         : bookedCount > 0
-                          ? "bg-yellow-500/20 border-yellow-500/50"
-                          : "bg-green-500/20 border-green-500/50"
-                      : "bg-black/20 border-white/5"
-                  }`}
+                          ? "bg-gradient-to-br from-yellow-500/30 to-yellow-500/10 border-yellow-500/60 shadow-lg shadow-yellow-500/20"
+                          : "bg-gradient-to-br from-green-500/30 to-green-500/10 border-green-500/60 shadow-lg shadow-green-500/20"
+                  } ${isCurrentDay ? "ring-2 ring-primary" : ""}`}
                 >
-                  <span className="font-bold text-white">{format(day, "d")}</span>
+                  <span className={`text-lg ${isSameMonth(day, currentDate) ? "text-white" : "text-muted-foreground"}`}>
+                    {format(day, "d")}
+                  </span>
                   {isSameMonth(day, currentDate) && (
-                    <span className="text-[10px] text-muted-foreground mt-1">
+                    <span className={`text-[10px] mt-1 font-bold ${
+                      bookedCount === crew.length 
+                        ? "text-red-400" 
+                        : bookedCount > 0 
+                          ? "text-yellow-400" 
+                          : "text-green-400"
+                    }`}>
                       {availableCount}/{crew.length}
                     </span>
                   )}
@@ -144,27 +158,32 @@ export function CrewAvailabilityCalendar({ projectId }: CrewAvailabilityCalendar
               );
             })}
           </div>
-          <div className="flex gap-4 mt-6 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-green-500/20 border border-green-500/50" />
-              <span className="text-muted-foreground">All Available</span>
+
+          {/* Legend */}
+          <div className="flex gap-6 mt-8 pt-6 border-t border-white/10 flex-wrap justify-center">
+            <div className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-green-500/30 to-green-500/10 border-2 border-green-500/60" />
+              <span className="text-sm font-medium text-green-400">All Available</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-yellow-500/20 border border-yellow-500/50" />
-              <span className="text-muted-foreground">Partially Booked</span>
+            <div className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-yellow-500/30 to-yellow-500/10 border-2 border-yellow-500/60" />
+              <span className="text-sm font-medium text-yellow-400">Partially Booked</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-red-500/20 border border-red-500/50" />
-              <span className="text-muted-foreground">All Booked</span>
+            <div className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-red-500/30 to-red-500/10 border-2 border-red-500/60" />
+              <span className="text-sm font-medium text-red-400">All Booked</span>
             </div>
           </div>
         </Card>
 
         {/* Crew Availability Details */}
-        <Card className="bg-card border-white/5 p-4">
-          <h4 className="font-bold text-white mb-4">Crew Booking Details</h4>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {crew.map((crewMember) => {
+        <Card className="bg-gradient-to-br from-card to-card/50 border border-white/10 p-6">
+          <h4 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+            <div className="w-1 h-6 bg-gradient-to-b from-primary to-primary/50 rounded" />
+            Crew Booking Details
+          </h4>
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {crew.map((crewMember, idx) => {
               const bookedDays = Array.from(crewAvailability[crewMember.id]);
               const upcomingBookedDays = bookedDays.filter((day) => {
                 const d = new Date(day);
@@ -172,21 +191,29 @@ export function CrewAvailabilityCalendar({ projectId }: CrewAvailabilityCalendar
               });
 
               return (
-                <div key={crewMember.id} className="pb-3 border-b border-white/5 last:border-b-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-white text-sm">{crewMember.name}</span>
-                    <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">
+                <div key={crewMember.id} className={`p-4 rounded-lg border ${idx === crew.length - 1 ? "" : "border-b-0"} transition-all hover:border-primary/50 bg-black/30 border-white/10`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-bold text-lg text-white">{crewMember.name}</span>
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                      upcomingBookedDays.length === 0
+                        ? "bg-green-500/20 text-green-400"
+                        : upcomingBookedDays.length === bookedDays.length
+                          ? "bg-red-500/20 text-red-400"
+                          : "bg-yellow-500/20 text-yellow-400"
+                    }`}>
                       {upcomingBookedDays.length} days booked
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-2">
                     {upcomingBookedDays.length === 0 ? (
-                      <span className="text-xs text-green-400">Available all month</span>
+                      <span className="text-sm font-medium text-green-400 bg-green-500/10 px-3 py-1.5 rounded-full">
+                        ✓ Available all month
+                      </span>
                     ) : (
                       upcomingBookedDays
                         .sort()
                         .map((day) => (
-                          <span key={day} className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">
+                          <span key={day} className="text-xs font-bold bg-red-500/20 text-red-400 px-3 py-1.5 rounded-full border border-red-500/30">
                             {format(new Date(day), "MMM d")}
                           </span>
                         ))
