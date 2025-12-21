@@ -54,8 +54,8 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
         projectId,
         title: data.title,
         type: data.type,
-        startTime: new Date(data.startTime).toISOString(),
-        endTime: new Date(data.endTime).toISOString(),
+        startTime: new Date(data.startTime).toISOString() as any,
+        endTime: new Date(data.endTime).toISOString() as any,
         description: data.description,
       },
       {

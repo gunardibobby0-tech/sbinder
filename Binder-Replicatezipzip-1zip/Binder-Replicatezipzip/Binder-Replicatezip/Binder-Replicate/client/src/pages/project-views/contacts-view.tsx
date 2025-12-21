@@ -531,7 +531,7 @@ function AddCrewMasterInlineDialog({ onCreate }: { onCreate: () => void }) {
                 <FormItem>
                   <FormLabel className="text-xs">Department</FormLabel>
                   <FormControl>
-                    <Input {...field} className="bg-black/20 border-white/10 text-sm" />
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" value={field.value ?? ""} />
                   </FormControl>
                 </FormItem>
               )}

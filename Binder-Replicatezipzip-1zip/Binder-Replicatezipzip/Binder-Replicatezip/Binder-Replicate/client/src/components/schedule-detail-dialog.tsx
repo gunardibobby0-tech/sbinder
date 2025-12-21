@@ -77,9 +77,9 @@ export function ScheduleDetailDialog({
             description: editData.description ?? event.description,
             latitude: editData.latitude,
             longitude: editData.longitude,
-            startTime: startTime as string,
-            endTime: endTime as string,
-          },
+            startTime,
+            endTime,
+          } as any,
         },
         {
           onSuccess: () => {
@@ -185,8 +185,8 @@ export function ScheduleDetailDialog({
                 Location (Coordinates)
               </h3>
               <LocationPicker
-                latitude={editData.latitude}
-                longitude={editData.longitude}
+                latitude={(editData.latitude ?? null) as any}
+                longitude={(editData.longitude ?? null) as any}
                 onLocationChange={(lat, lng) => {
                   setEditData({ ...editData, latitude: lat, longitude: lng });
                 }}
