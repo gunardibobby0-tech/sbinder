@@ -57,6 +57,14 @@ export const db = drizzle({ client: pool, schema });
             "created_at" timestamp DEFAULT now()
           )
         `);
+        
+        // Add missing columns to events table if they don't exist
+        await pool.query(`
+          ALTER TABLE "events" 
+          ADD COLUMN IF NOT EXISTS "latitude" text,
+          ADD COLUMN IF NOT EXISTS "longitude" text
+        `);
+        
         console.log('✓ All required tables ready');
       } catch (tableErr) {
         console.error('Error ensuring cast/crew_master tables:', tableErr);
