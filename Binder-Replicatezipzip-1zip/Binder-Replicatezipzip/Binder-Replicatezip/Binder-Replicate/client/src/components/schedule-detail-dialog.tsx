@@ -291,7 +291,7 @@ export function ScheduleDetailDialog({
                                       }));
                                       if (!result.hasConflict) {
                                         assignCrew(
-                                          { projectId, data: { projectId, eventId: event.id, crewId: crewMember.id! } },
+                                          { projectId, data: { eventId: event.id, crewId: crewMember.id! } },
                                           {
                                             onSuccess: () => {
                                               // Auto-create budget line item
