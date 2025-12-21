@@ -107,11 +107,14 @@ export async function callOpenRouter(
     }
 
     const data: OpenRouterResponse = await response.json();
+    console.log('OpenRouter full response:', JSON.stringify(data).substring(0, 500));
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error('Invalid OpenRouter response structure:', data);
       throw new Error('Invalid response structure from API');
     }
-    return data.choices[0].message.content;
+    const content = data.choices[0].message.content;
+    console.log('Extracted content length:', content?.length || 0);
+    return content;
   } catch (error) {
     console.error('OpenRouter API call failed:', error);
     throw error;
@@ -129,65 +132,15 @@ export async function extractScriptData(
   crew: Array<{ name: string; role: string; department?: string }>;
   schedule: Array<{ title: string; description: string; duration: number }>;
 }> {
-  const dateRangeInfo = dateRange ? `\nProduction Date Range: MUST be between ${dateRange.startDate} and ${dateRange.endDate} (INCLUSIVE)` : '';
-  const daysInfo = daysOfWeek && daysOfWeek.length > 0 ? `\nProduction Days (STRICT): ${daysOfWeek.join(', ')} ONLY. Do not use other days.` : '';
-  
-  const dateRangeInstruction = dateRange ? `\n5. CRITICAL: ALL schedule events MUST be within the date range ${dateRange.startDate} to ${dateRange.endDate}. DO NOT generate dates outside this range.` : '';
-  const daysInstruction = daysOfWeek && daysOfWeek.length > 0 ? `\n6. CRITICAL: Schedule events ONLY on these specific days: ${daysOfWeek.join(", ")}. Do NOT use any other days of the week.` : '';
-  
-  const prompt = `You are a professional film and TV production expert. Your task is to analyze a screenplay, script, or production document and extract key production data.
+  const prompt = `Extract production data from this script as JSON only. No explanation, just JSON.
 
-DOCUMENT TO ANALYZE:
-${documentContent}${dateRangeInfo}${daysInfo}
+Script:
+${documentContent.substring(0, 2000)}
 
-EXTRACTION INSTRUCTIONS:
-1. Extract the main script content (narrative, dialogue, scene descriptions)
-2. Extract CHARACTER CAST ONLY - character names that appear in the script
-3. Suggest CREW POSITIONS as production roles needed (not actual people - these become master data templates)
-   - Include the department/discipline for each crew position
-   - Map positions to standard departments: Direction, Camera, Lighting, Sound, Production, Grip, Art, Makeup, VFX, etc.
-4. Extract production schedule events with realistic durations${dateRangeInstruction}${daysInstruction}
+Return only this JSON structure (no markdown, no text):
+{"scriptContent":"","cast":[{"name":"character name","role":"description"}],"crew":[{"name":"job title","role":"description","department":"category"}],"schedule":[{"title":"day title","description":"what happens","duration":480}]}
 
-EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
-{
-  "scriptContent": "The full screenplay or narrative content from the document. Include all dialogue, scene directions, and narrative text. If no script found, use a brief summary of the document.",
-  "cast": [
-    {
-      "name": "Character name ONLY (e.g., 'John', 'Detective Sarah', 'The Villain')",
-      "role": "Brief character description or type (e.g., 'Lead', 'Detective', 'Victim', 'Narrator')"
-    }
-  ],
-  "crew": [
-    {
-      "name": "Job title (e.g., 'Director', 'Cinematographer', 'Sound Mixer', 'Gaffer')",
-      "role": "Key responsibilities (e.g., 'Direct actors and oversee creative vision' or 'Manage camera work and cinematography')",
-      "department": "Department category (e.g., 'Direction', 'Camera', 'Sound', 'Lighting', 'Production', 'Art')"
-    }
-  ],
-  "schedule": [
-    {
-      "title": "Event or shooting day title (e.g., 'Day 1: Interior Scenes', 'Location Scout')",
-      "description": "Brief description of what happens during this schedule item",
-      "duration": 480
-    }
-  ]
-}
-
-IMPORTANT RULES:
-- Return ONLY the JSON object, no additional text, markdown, or explanations
-- CAST = Character names from script (what to film), will be created as cast entries with roleType "character"
-- CREW = Job positions needed (Director, DP, etc.), will be stored as crew master templates for talent assignment
-- crew field should contain 3-8 essential crew positions based on the production needs (never empty)
-- All other fields are required. If information is not found, use appropriate defaults:
-  - scriptContent: empty string ""
-  - cast: array of character names extracted from script
-  - crew: array of 3-8 suggested crew positions (never empty if production type is clear)
-  - schedule: empty array [] if no schedule found
-- For cast, use ONLY character names from the script, not actor names
-- For crew, use actual job titles (Director, Cinematographer, Sound Mixer, Gaffer, etc.)
-- Duration should be in minutes (480 = 8 hours for a typical shooting day)
-- Ensure the JSON is valid and properly formatted
-- Extract as much detail as possible from the provided document`;
+Rules: extract character names from script to cast, suggest 5-8 crew job positions like Director/DP/Sound, use 480 minutes for typical 8-hour day.`;
 
   try {
     const response = await callOpenRouter([
