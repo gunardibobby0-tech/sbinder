@@ -60,6 +60,9 @@ export function ScheduleDetailDialog({
 
   const handleSaveChanges = () => {
     if (event.id && projectId) {
+      const startTime = editData.startTime instanceof Date ? editData.startTime.toISOString() : (editData.startTime || event.startTime);
+      const endTime = editData.endTime instanceof Date ? editData.endTime.toISOString() : (editData.endTime || event.endTime);
+      
       updateEvent(
         {
           projectId,
@@ -69,8 +72,8 @@ export function ScheduleDetailDialog({
             description: editData.description || event.description,
             latitude: editData.latitude,
             longitude: editData.longitude,
-            startTime: editData.startTime || event.startTime,
-            endTime: editData.endTime || event.endTime,
+            startTime,
+            endTime,
           },
         },
         {

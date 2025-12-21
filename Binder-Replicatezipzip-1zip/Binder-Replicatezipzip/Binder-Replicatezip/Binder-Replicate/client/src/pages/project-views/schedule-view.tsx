@@ -45,7 +45,7 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                 <p className="text-muted-foreground">Plan your shoots, scouts, and meetings.</p>
               </div>
             ) : (
-              events?.map((event) => {
+              events?.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()).map((event) => {
                 const eventCrewCount = assignments.filter(a => a.eventId === event.id).length;
                 return (
                   <Card 

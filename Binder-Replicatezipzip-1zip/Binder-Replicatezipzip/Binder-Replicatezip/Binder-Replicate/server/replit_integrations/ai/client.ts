@@ -119,11 +119,11 @@ export async function extractScriptData(
   crew: Array<{ name: string; role: string; department?: string }>;
   schedule: Array<{ title: string; description: string; duration: number }>;
 }> {
-  const dateRangeInfo = dateRange ? `\nProduction Date Range: From ${dateRange.startDate} to ${dateRange.endDate}` : '';
-  const daysInfo = daysOfWeek && daysOfWeek.length > 0 ? `\nProduction Days: ${daysOfWeek.join(', ')}` : '';
+  const dateRangeInfo = dateRange ? `\nProduction Date Range: MUST be between ${dateRange.startDate} and ${dateRange.endDate} (INCLUSIVE)` : '';
+  const daysInfo = daysOfWeek && daysOfWeek.length > 0 ? `\nProduction Days (STRICT): ${daysOfWeek.join(', ')} ONLY. Do not use other days.` : '';
   
-  const dateRangeInstruction = dateRange ? '\n5. Schedule all events within the provided date range' : '';
-  const daysInstruction = daysOfWeek && daysOfWeek.length > 0 ? '\n6. Only schedule events on the specified production days (Monday-Sunday)' : '';
+  const dateRangeInstruction = dateRange ? `\n5. CRITICAL: ALL schedule events MUST be within the date range ${dateRange.startDate} to ${dateRange.endDate}. DO NOT generate dates outside this range.` : '';
+  const daysInstruction = daysOfWeek && daysOfWeek.length > 0 ? `\n6. CRITICAL: Schedule events ONLY on these specific days: ${daysOfWeek.join(", ")}. Do NOT use any other days of the week.` : '';
   
   const prompt = `You are a professional film and TV production expert. Your task is to analyze a screenplay, script, or production document and extract key production data.
 
