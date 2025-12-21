@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +11,7 @@ import { insertCrewSchema, type InsertCrew, type Crew } from "@shared/schema";
 import { Loader2, Plus, Trash2, DollarSign, Briefcase, Phone } from "lucide-react";
 import { useState } from "react";
 import { useCreateCrew, useDeleteCrew } from "@/hooks/use-crew";
+import { useSettings } from "@/hooks/use-settings";
 
 interface CrewManagementDialogProps {
   projectId: number;
@@ -95,9 +97,9 @@ function CrewRow({ crew, projectId }: { crew: Crew; projectId: number }) {
         </span>
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-1 text-muted-foreground">
+        <div className="flex items-center gap-1 text-muted-foreground text-sm">
           <DollarSign className="w-3.5 h-3.5" />
-          <span className="text-sm">{crew.pricing || "—"}</span>
+          <span>{crew.costAmount ? `${crew.costAmount}/${crew.paymentType} ${crew.currency || "IDR"}` : "—"}</span>
         </div>
       </TableCell>
       <TableCell>
@@ -130,6 +132,7 @@ function CrewRow({ crew, projectId }: { crew: Crew; projectId: number }) {
 function AddCrewDialog({ projectId }: { projectId: number }) {
   const [open, setOpen] = useState(false);
   const { mutate, isPending } = useCreateCrew();
+  const { settings } = useSettings();
 
   const form = useForm<InsertCrew>({
     resolver: zodResolver(insertCrewSchema),
@@ -141,6 +144,9 @@ function AddCrewDialog({ projectId }: { projectId: number }) {
       pricing: "",
       contact: "",
       notes: "",
+      costAmount: "",
+      paymentType: "daily",
+      currency: settings?.currency || "IDR",
     },
   });
 
@@ -234,17 +240,91 @@ function AddCrewDialog({ projectId }: { projectId: number }) {
               )}
             />
 
+            <div className="space-y-4 border-t border-white/10 pt-4">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-primary" />
+                Fee & Payment Type
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="costAmount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Cost Amount</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          className="bg-black/20 border-white/10 focus-visible:ring-primary"
+                          placeholder="e.g., 500"
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="paymentType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Payment Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-black/20 border-white/10 h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-[#1c2128] border-white/10">
+                          <SelectItem value="hourly">Hourly</SelectItem>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="fixed">Fixed (Project)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Currency</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-black/20 border-white/10">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-[#1c2128] border-white/10">
+                        <SelectItem value="IDR">IDR (Indonesian Rupiah)</SelectItem>
+                        <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="pricing"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Pricing/Rate</FormLabel>
+                  <FormLabel>Legacy Pricing Notes</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       className="bg-black/20 border-white/10 focus-visible:ring-primary"
-                      placeholder="e.g., $500/day or $5000/week"
+                      placeholder="e.g., $500/day or $5000/week (optional)"
                       value={field.value || ""}
                     />
                   </FormControl>

@@ -36,6 +36,9 @@ export const crewMaster = pgTable("crew_master", {
   email: text("email"),
   phone: text("phone"),
   notes: text("notes"),
+  costAmount: text("cost_amount"), // e.g., "500" or "10000"
+  paymentType: text("payment_type"), // "hourly", "daily", "fixed"
+  currency: text("currency").default("IDR"), // IDR or USD
   createdAt: timestamp("created_at").defaultNow(),
 });
 
