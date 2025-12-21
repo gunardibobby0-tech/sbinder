@@ -179,17 +179,18 @@ IMPORTANT RULES:
 - Ensure the JSON is valid and properly formatted
 - Extract as much detail as possible from the provided document`;
 
-  const response = await callOpenRouter([
-    {
-      role: 'user',
-      content: prompt,
-    },
-  ], model);
-
   try {
+    const response = await callOpenRouter([
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ], model);
+
     // Extract JSON from response (handle potential markdown formatting)
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
+      console.error('No JSON found in response:', response);
       throw new Error('No JSON found in response');
     }
     const parsed = JSON.parse(jsonMatch[0]);
@@ -202,7 +203,10 @@ IMPORTANT RULES:
     
     return parsed;
   } catch (error) {
-    console.error('Failed to parse OpenRouter response:', response);
+    console.error('Failed to extract script data:', error);
+    if (error instanceof Error && error.message.includes('API error')) {
+      throw new Error('API service is currently unavailable. Please set up your OpenRouter API key or try again later.');
+    }
     throw new Error('Failed to extract data from document. Please check the document format and try again.');
   }
 }
