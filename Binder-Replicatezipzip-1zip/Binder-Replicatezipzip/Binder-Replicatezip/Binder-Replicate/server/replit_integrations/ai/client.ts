@@ -83,29 +83,39 @@ export async function callOpenRouter(
 ): Promise<string> {
   const apiKey = await getApiKey();
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://studiobinder.local',
-      'X-Title': 'StudioBinder',
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.7,
-      max_tokens: 4000,
-    }),
-  });
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://studiobinder.local',
+        'X-Title': 'StudioBinder',
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.7,
+        max_tokens: 4000,
+      }),
+    });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`API error: ${response.status} - ${error}`);
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`OpenRouter API error: ${response.status}`, error);
+      throw new Error(`API error: ${response.status} - ${error}`);
+    }
+
+    const data: OpenRouterResponse = await response.json();
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid OpenRouter response structure:', data);
+      throw new Error('Invalid response structure from API');
+    }
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('OpenRouter API call failed:', error);
+    throw error;
   }
-
-  const data: OpenRouterResponse = await response.json();
-  return data.choices[0].message.content;
 }
 
 export async function extractScriptData(
@@ -187,13 +197,25 @@ IMPORTANT RULES:
       },
     ], model);
 
+    // Log response for debugging
+    console.log('API Response length:', response?.length || 0);
+    console.log('API Response preview:', response?.substring(0, 200) || 'empty');
+
     // Extract JSON from response (handle potential markdown formatting)
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error('No JSON found in response:', response);
-      throw new Error('No JSON found in response');
+    const jsonMatch = response?.match(/\{[\s\S]*\}/);
+    if (!jsonMatch || !jsonMatch[0]) {
+      console.error('No JSON found in response. Full response:', response?.substring(0, 500) || 'empty');
+      throw new Error(`No JSON found in response (length: ${response?.length || 0})`);
     }
-    const parsed = JSON.parse(jsonMatch[0]);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (parseError) {
+      console.error('Failed to parse JSON:', parseError);
+      console.error('JSON string:', jsonMatch[0]?.substring(0, 500));
+      throw new Error('Failed to parse JSON response from API');
+    }
     
     // Validate structure
     if (!parsed.scriptContent) parsed.scriptContent = '';
@@ -204,8 +226,13 @@ IMPORTANT RULES:
     return parsed;
   } catch (error) {
     console.error('Failed to extract script data:', error);
-    if (error instanceof Error && error.message.includes('API error')) {
-      throw new Error('API service is currently unavailable. Please set up your OpenRouter API key or try again later.');
+    if (error instanceof Error) {
+      if (error.message.includes('API error')) {
+        throw new Error('API service is currently unavailable. Please ensure your OpenRouter API key is valid and has credits.');
+      }
+      if (error.message.includes('API key not configured')) {
+        throw new Error('OpenRouter API key is not set. Please configure it in your project settings.');
+      }
     }
     throw new Error('Failed to extract data from document. Please check the document format and try again.');
   }
