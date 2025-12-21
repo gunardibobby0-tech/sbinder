@@ -1,6 +1,6 @@
 import { useContacts, useCreateContact, useDeleteContact } from "@/hooks/use-contacts";
 import { useCrew } from "@/hooks/use-crew";
-import { useCrewMaster } from "@/hooks/use-crew-master";
+import { useCrewMaster, useCreateCrewMaster, useUpdateCrewMaster, useDeleteCrewMaster } from "@/hooks/use-crew-master";
 import { useCast, useCreateCast, useDeleteCast, useUpdateCast } from "@/hooks/use-cast";
 import { AssignActorDialog } from "@/components/assign-actor-dialog";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertCastSchema, insertContactSchema, type InsertCast, type InsertContact, type Contact, type Cast, type CrewMaster } from "@shared/schema";
+import { insertCastSchema, insertContactSchema, insertCrewMasterSchema, type InsertCast, type InsertContact, type InsertCrewMaster, type Contact, type Cast, type CrewMaster } from "@shared/schema";
 import { Loader2, Plus, Trash2, Mail, Phone, Search, UserCheck, Users, Briefcase } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,7 @@ export default function ContactsView({ projectId }: { projectId: number }) {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [assignLoading, setAssignLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"cast" | "crew">("cast");
+  const [editingCast, setEditingCast] = useState<Cast | null>(null);
 
   const filteredCast = cast?.filter(c => 
     c.role.toLowerCase().includes(search.toLowerCase())
@@ -165,7 +166,15 @@ export default function ContactsView({ projectId }: { projectId: number }) {
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{item.notes || "—"}</TableCell>
-                      <TableCell>
+                      <TableCell className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10"
+                          onClick={() => setEditingCast(item)}
+                        >
+                          <span className="w-4 h-4">✏️</span>
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -191,6 +200,16 @@ export default function ContactsView({ projectId }: { projectId: number }) {
           <p className="text-muted-foreground mb-4">Open the Crew Master dialog to manage talents/crew</p>
           <CrewMasterDialog crewMaster={crewMasterData || []} isLoading={crewMasterLoading} />
         </div>
+      )}
+
+      {/* Edit Cast Dialog */}
+      {editingCast && (
+        <EditCastDialog
+          projectId={projectId}
+          castItem={editingCast}
+          crewMaster={crewMasterData || []}
+          onClose={() => setEditingCast(null)}
+        />
       )}
     </div>
   );
@@ -350,6 +369,9 @@ function AddCastDialog({ projectId, crewMaster }: { projectId: number; crewMaste
 
 function CrewMasterDialog({ crewMaster, isLoading }: { crewMaster: CrewMaster[]; isLoading: boolean }) {
   const [open, setOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<CrewMaster | null>(null);
+  const createCrewMaster = useCreateCrewMaster();
+  const deleteCrewMaster = useDeleteCrewMaster();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -361,7 +383,10 @@ function CrewMasterDialog({ crewMaster, isLoading }: { crewMaster: CrewMaster[];
       </DialogTrigger>
       <DialogContent className="bg-[#1c2128] border-white/10 text-white max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Crew Master Database</DialogTitle>
+          <div className="flex justify-between items-center">
+            <DialogTitle className="text-2xl">Crew Master Database</DialogTitle>
+            <AddCrewMasterInlineDialog onCreate={() => createCrewMaster.mutate({} as any)} />
+          </div>
         </DialogHeader>
         <div className="space-y-6 py-4">
           {isLoading ? (
@@ -382,6 +407,7 @@ function CrewMasterDialog({ crewMaster, isLoading }: { crewMaster: CrewMaster[];
                     <TableHead className="text-white">Title</TableHead>
                     <TableHead className="text-white">Department</TableHead>
                     <TableHead className="text-white">Contact</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -397,6 +423,24 @@ function CrewMasterDialog({ crewMaster, isLoading }: { crewMaster: CrewMaster[];
                       <TableCell className="text-sm text-muted-foreground">
                         {member.email || member.phone || "—"}
                       </TableCell>
+                      <TableCell className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 w-8 h-8"
+                          onClick={() => setEditingMember(member)}
+                        >
+                          <span className="text-xs">✏️</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 w-8 h-8"
+                          onClick={() => deleteCrewMaster.mutate(member.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -404,6 +448,320 @@ function CrewMasterDialog({ crewMaster, isLoading }: { crewMaster: CrewMaster[];
             </div>
           )}
         </div>
+      </DialogContent>
+
+      {editingMember && (
+        <EditCrewMasterInlineDialog
+          member={editingMember}
+          onClose={() => setEditingMember(null)}
+        />
+      )}
+    </Dialog>
+  );
+}
+
+function AddCrewMasterInlineDialog({ onCreate }: { onCreate: () => void }) {
+  const [open, setOpen] = useState(false);
+  const { mutate, isPending } = useCreateCrewMaster();
+  
+  const form = useForm<InsertCrewMaster>({
+    resolver: zodResolver(insertCrewMasterSchema),
+    defaultValues: {
+      name: "",
+      title: "",
+      department: "",
+      email: "",
+      phone: "",
+      notes: "",
+    },
+  });
+
+  const onSubmit = (data: InsertCrewMaster) => {
+    mutate(data, {
+      onSuccess: () => {
+        setOpen(false);
+        form.reset();
+        onCreate();
+      },
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="w-3 h-3 mr-1" />
+          Add Talent
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="bg-[#1c2128] border-white/10 text-white">
+        <DialogHeader>
+          <DialogTitle>Add Talent to Crew Master</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 pt-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Title/Position</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="department"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Department</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <Button type="submit" disabled={isPending} className="w-full bg-primary hover:bg-primary/90 text-sm">
+              {isPending && <Loader2 className="w-3 h-3 animate-spin mr-2" />}
+              Add Talent
+            </Button>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditCrewMasterInlineDialog({ member, onClose }: { member: CrewMaster; onClose: () => void }) {
+  const [open, setOpen] = useState(true);
+  const { mutate, isPending } = useUpdateCrewMaster();
+  
+  const form = useForm<InsertCrewMaster>({
+    resolver: zodResolver(insertCrewMasterSchema),
+    defaultValues: {
+      name: member.name,
+      title: member.title,
+      department: member.department || "",
+      email: member.email || "",
+      phone: member.phone || "",
+      notes: member.notes || "",
+    },
+  });
+
+  const onSubmit = (data: InsertCrewMaster) => {
+    mutate({ crewMasterId: member.id, data }, {
+      onSuccess: () => {
+        setOpen(false);
+        onClose();
+      },
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(val) => { if (!val) onClose(); }}>
+      <DialogContent className="bg-[#1c2128] border-white/10 text-white">
+        <DialogHeader>
+          <DialogTitle>Edit Talent</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 pt-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Title/Position</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="department"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Department</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" value={field.value ?? ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <Button type="submit" disabled={isPending} className="w-full bg-primary hover:bg-primary/90 text-sm">
+              {isPending && <Loader2 className="w-3 h-3 animate-spin mr-2" />}
+              Save Changes
+            </Button>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditCastDialog({ projectId, castItem, crewMaster, onClose }: { projectId: number; castItem: Cast; crewMaster: CrewMaster[]; onClose: () => void }) {
+  const [open, setOpen] = useState(true);
+  const updateCast = useUpdateCast();
+  
+  const form = useForm<InsertCast>({
+    resolver: zodResolver(insertCastSchema),
+    defaultValues: {
+      projectId,
+      role: castItem.role,
+      roleType: castItem.roleType as "character" | "crew",
+      crewMasterId: castItem.crewMasterId || undefined,
+      notes: castItem.notes || "",
+    },
+  });
+
+  const onSubmit = (data: InsertCast) => {
+    updateCast.mutate(
+      { projectId, castId: castItem.id, data },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          onClose();
+        },
+      }
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(val) => { if (!val) onClose(); }}>
+      <DialogContent className="bg-[#1c2128] border-white/10 text-white">
+        <DialogHeader>
+          <DialogTitle>Edit Cast Member</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+            <FormField
+              control={form.control}
+              name="roleType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-black/20 border-white/10">
+                        <SelectValue placeholder="Select role type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-[#1c2128] border-white/10 text-white">
+                      <SelectItem value="character">Character</SelectItem>
+                      <SelectItem value="crew">Crew</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {form.watch("roleType") === "character" && (
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Character Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="bg-black/20 border-white/10" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {form.watch("roleType") === "crew" && (
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Crew Position</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="bg-black/20 border-white/10" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            <FormField
+              control={form.control}
+              name="crewMasterId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assign Talent</FormLabel>
+                  <Select onValueChange={(val) => field.onChange(val ? parseInt(val) : undefined)} value={field.value ? String(field.value) : ""}>
+                    <FormControl>
+                      <SelectTrigger className="bg-black/20 border-white/10">
+                        <SelectValue placeholder="Select talent" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-[#1c2128] border-white/10 text-white">
+                      <SelectItem value="">Unassigned</SelectItem>
+                      {crewMaster?.map((crew) => (
+                        <SelectItem key={crew.id} value={String(crew.id)}>
+                          {crew.name} - {crew.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10" value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button type="submit" disabled={updateCast.isPending} className="w-full bg-primary hover:bg-primary/90 mt-2">
+              {updateCast.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Save Changes
+            </Button>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

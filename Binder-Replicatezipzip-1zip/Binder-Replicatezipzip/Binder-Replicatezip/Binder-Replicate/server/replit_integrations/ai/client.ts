@@ -132,10 +132,8 @@ ${documentContent}${dateRangeInfo}${daysInfo}
 
 EXTRACTION INSTRUCTIONS:
 1. Extract the main script content (narrative, dialogue, scene descriptions)
-2. Extract cast data SEPARATELY:
-   - Character names and roles (roleType: "character")
-   - Required crew/producers (roleType: "crew")
-3. Suggest additional crew positions for the production as master database suggestions
+2. Extract CHARACTER CAST ONLY - character names that appear in the script
+3. Suggest CREW POSITIONS as production roles needed (not actual people - these become master data templates)
 4. Extract production schedule events with realistic durations${dateRangeInstruction}${daysInstruction}
 
 EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
@@ -143,14 +141,14 @@ EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
   "scriptContent": "The full screenplay or narrative content from the document. Include all dialogue, scene directions, and narrative text. If no script found, use a brief summary of the document.",
   "cast": [
     {
-      "name": "Character name or Actor name",
-      "role": "Character role (e.g., 'Lead', 'Detective', 'Female Lead') or Actor character"
+      "name": "Character name ONLY (e.g., 'John', 'Detective Sarah', 'The Villain')",
+      "role": "Brief character description or type (e.g., 'Lead', 'Detective', 'Victim', 'Narrator')"
     }
   ],
   "crew": [
     {
-      "name": "Job title (e.g., 'Director', 'Cinematographer', 'Sound Mixer')",
-      "role": "Description of responsibilities"
+      "name": "Job title (e.g., 'Director', 'Cinematographer', 'Sound Mixer', 'Gaffer')",
+      "role": "Key responsibilities (e.g., 'Direct actors and oversee creative vision' or 'Manage camera work and cinematography')"
     }
   ],
   "schedule": [
@@ -164,15 +162,16 @@ EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
 
 IMPORTANT RULES:
 - Return ONLY the JSON object, no additional text, markdown, or explanations
-- Include both cast and crew in suggestions based on production type
-- crew field should contain 3-6 essential crew positions based on the production needs
+- CAST = Character names from script (what to film), will be created as cast entries with roleType "character"
+- CREW = Job positions needed (Director, DP, etc.), will be stored as crew master templates for talent assignment
+- crew field should contain 3-8 essential crew positions based on the production needs (never empty)
 - All other fields are required. If information is not found, use appropriate defaults:
   - scriptContent: empty string ""
-  - cast: empty array [] if no cast found
-  - crew: array of 3-6 suggested crew positions (never empty if production type is clear)
+  - cast: array of character names extracted from script
+  - crew: array of 3-8 suggested crew positions (never empty if production type is clear)
   - schedule: empty array [] if no schedule found
-- For cast, include complete names and clear role descriptions
-- For crew, use actual job titles (Director, DP, Sound Mixer, etc.) not placeholder names
+- For cast, use ONLY character names from the script, not actor names
+- For crew, use actual job titles (Director, Cinematographer, Sound Mixer, Gaffer, etc.)
 - Duration should be in minutes (480 = 8 hours for a typical shooting day)
 - Ensure the JSON is valid and properly formatted
 - Extract as much detail as possible from the provided document`;

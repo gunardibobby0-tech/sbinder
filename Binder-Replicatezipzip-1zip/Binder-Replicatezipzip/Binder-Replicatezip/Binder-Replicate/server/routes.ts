@@ -285,34 +285,38 @@ export async function registerRoutes(
       // Extract cast, crew, and schedule from script
       const suggestions = await extractScriptData(scriptContent, selectedModel, dateRange, daysOfWeek);
 
-      // Get existing contacts to check for duplicates
-      const existingContacts = await storage.getContacts(projectId);
-      const existingNames = new Set(existingContacts.map(c => c.name.toLowerCase()));
+      // Get existing cast to check for duplicates
+      const existingCast = await storage.getCast(projectId);
+      const existingCastNames = new Set(existingCast.map(c => c.role.toLowerCase()));
+      
+      // Get existing crew master to check for duplicates
+      const existingCrewMaster = await storage.getCrewMaster();
+      const existingCrewNames = new Set(existingCrewMaster.map(c => c.name.toLowerCase()));
 
       // Filter out duplicates
-      const newCast = suggestions.cast.filter(c => !existingNames.has(c.name.toLowerCase()));
-      const newCrew = suggestions.crew.filter(c => !existingNames.has(c.name.toLowerCase()));
+      const newCastSuggestions = suggestions.cast.filter(c => !existingCastNames.has(c.name.toLowerCase()));
+      const newCrewSuggestions = suggestions.crew.filter(c => !existingCrewNames.has(c.name.toLowerCase()));
 
-      // Create CAST contacts
+      // Create CAST entries (characters from script)
       const createdCast = await Promise.all(
-        newCast.map(c =>
-          storage.createContact({
+        newCastSuggestions.map(c =>
+          storage.createCast({
             projectId,
-            name: c.name,
-            role: c.role,
-            category: "Cast"
+            role: c.name,
+            roleType: "character",
+            notes: c.role // Store character description in notes
           })
         )
       );
 
-      // Create CREW contacts
-      const createdCrew = await Promise.all(
-        newCrew.map(c =>
-          storage.createContact({
-            projectId,
-            name: c.name,
-            role: c.role,
-            category: "Crew"
+      // Create CREW MASTER entries (job positions as templates)
+      const createdCrewMaster = await Promise.all(
+        newCrewSuggestions.map(c =>
+          storage.createCrewMaster({
+            name: c.name, // Job title like "Director"
+            title: c.name, // Job title
+            department: c.name, // Can be refined later
+            notes: c.role // Responsibilities
           })
         )
       );
@@ -336,11 +340,11 @@ export async function registerRoutes(
 
       res.json({
         cast: createdCast,
-        crew: createdCrew,
+        crew: createdCrewMaster,
         events: createdEvents,
         duplicatesSkipped: {
-          cast: suggestions.cast.length - newCast.length,
-          crew: suggestions.crew.length - newCrew.length
+          cast: suggestions.cast.length - newCastSuggestions.length,
+          crew: suggestions.crew.length - newCrewSuggestions.length
         }
       });
     } catch (err) {
