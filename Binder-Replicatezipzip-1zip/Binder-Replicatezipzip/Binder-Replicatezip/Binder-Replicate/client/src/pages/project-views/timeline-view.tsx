@@ -78,6 +78,18 @@ export default function TimelineView({ projectId }: { projectId: number }) {
       })) as GroupedEvent[];
   }, [events]);
 
+  const stats = useMemo(() => {
+    const totalEvents = groupedEvents.reduce((sum, day) => sum + day.events.length, 0);
+    const totalMinutes = groupedEvents.reduce((sum, day) => 
+      sum + day.events.reduce((daySum, event) => daySum + event.durationMinutes, 0), 0
+    );
+    const dateRange = groupedEvents.length > 0 ? {
+      start: groupedEvents[0].date,
+      end: groupedEvents[groupedEvents.length - 1].date,
+    } : null;
+    return { totalEvents, totalMinutes, dateRange };
+  }, [groupedEvents]);
+
   if (isLoading) {
     return (
       <div className="p-12 text-center">
@@ -99,18 +111,6 @@ export default function TimelineView({ projectId }: { projectId: number }) {
       </div>
     );
   }
-
-  const stats = useMemo(() => {
-    const totalEvents = groupedEvents.reduce((sum, day) => sum + day.events.length, 0);
-    const totalMinutes = groupedEvents.reduce((sum, day) => 
-      sum + day.events.reduce((daySum, event) => daySum + event.durationMinutes, 0), 0
-    );
-    const dateRange = groupedEvents.length > 0 ? {
-      start: groupedEvents[0].date,
-      end: groupedEvents[groupedEvents.length - 1].date,
-    } : null;
-    return { totalEvents, totalMinutes, dateRange };
-  }, [groupedEvents]);
 
   return (
     <div className="p-6 lg:p-10 space-y-8 max-w-7xl mx-auto">
