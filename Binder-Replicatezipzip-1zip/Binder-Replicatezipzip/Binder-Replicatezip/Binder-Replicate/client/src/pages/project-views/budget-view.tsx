@@ -69,9 +69,20 @@ export default function BudgetView({ projectId }: { projectId: number }) {
   const handleCalculateBudget = async () => {
     setIsCalculating(true);
     try {
+      // Step 1: Delete all auto-calculated items
+      const autoCalcItems = lineItems.filter(item => item.isAutoCalculated);
+      for (const item of autoCalcItems) {
+        await new Promise<void>((resolve) => {
+          deleteLineItem(
+            { projectId, itemId: item.id },
+            { onSuccess: () => resolve() } as any
+          );
+        });
+      }
+
       let addedCount = 0;
 
-      // Process crew assignments
+      // Step 2: Process crew assignments and calculate costs
       for (const assignment of crewAssignments) {
         const event = events.find(e => e.id === assignment.eventId);
         const crewMem = crewMaster.find(c => c.id === assignment.crewId);
@@ -95,52 +106,38 @@ export default function BudgetView({ projectId }: { projectId: number }) {
           }
 
           if (amount > 0) {
-            // Check if budget line already exists to avoid duplicates
-            const exists = lineItems.some(
-              item => item.description === description && item.category === "Crew"
-            );
-
-            if (!exists) {
-              await new Promise((resolve) => {
-                createLineItem(
-                  { projectId, data: { category: "Crew", description, amount: amount.toString(), status: "estimated", projectId } as any },
-                  { onSuccess: resolve } as any
-                );
-              });
-              addedCount++;
-            }
+            await new Promise<void>((resolve) => {
+              createLineItem(
+                { projectId, data: { category: "Crew", description, amount: amount.toString(), status: "estimated", projectId, isAutoCalculated: true } as any },
+                { onSuccess: () => resolve() } as any
+              );
+            });
+            addedCount++;
           }
         }
       }
 
-      // Process cast assignments with fixed compensation
+      // Step 3: Process cast assignments with fixed compensation
       for (const cast of castData) {
         if (cast.crewMasterId) {
           const talent = crewMaster.find(c => c.id === cast.crewMasterId);
-          if (talent && talent.costAmount && talent.paymentType === "fixed") {
+          if (talent && talent.costAmount && talent.paymentType === "fixed" && talent.name) {
             const description = `Cast: ${talent.name} - ${cast.role}`;
 
-            // Check if budget line already exists
-            const exists = lineItems.some(
-              item => item.description === description && item.category === "Cast"
-            );
-
-            if (!exists) {
-              await new Promise((resolve) => {
-                createLineItem(
-                  { projectId, data: { category: "Cast", description, amount: parseFloat(talent.costAmount).toString(), status: "estimated", projectId } as any },
-                  { onSuccess: resolve } as any
-                );
-              });
-              addedCount++;
-            }
+            await new Promise<void>((resolve) => {
+              createLineItem(
+                { projectId, data: { category: "Cast", description, amount: parseFloat(talent.costAmount).toString(), status: "estimated", projectId, isAutoCalculated: true } as any },
+                { onSuccess: () => resolve() } as any
+              );
+            });
+            addedCount++;
           }
         }
       }
 
       toast({
-        title: "Budget Calculated",
-        description: `Added ${addedCount} budget line item${addedCount !== 1 ? 's' : ''}`,
+        title: "Budget Recalculated",
+        description: `Refreshed ${addedCount} budget line item${addedCount !== 1 ? 's' : ''}. Manual items preserved.`,
       });
     } catch (error) {
       toast({

@@ -144,6 +144,7 @@ export const budgetLineItems = pgTable("budget_line_items", {
   description: text("description").notNull(),
   amount: text("amount").notNull(), // Stored as string for precision
   status: text("status").default("estimated"), // estimated, approved, actual
+  isAutoCalculated: boolean("is_auto_calculated").default(false), // Track if auto-generated or manual
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
