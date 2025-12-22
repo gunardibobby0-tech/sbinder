@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import BudgetChart from "@/components/budget-chart";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -187,6 +188,11 @@ export default function BudgetView({ projectId }: { projectId: number }) {
             </div>
           </div>
         </Card>
+      )}
+
+      {/* Budget Charts */}
+      {lineItems.length > 0 && (
+        <BudgetChart lineItems={lineItems} />
       )}
 
       {/* Line Items */}
