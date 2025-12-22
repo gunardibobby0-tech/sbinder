@@ -133,7 +133,7 @@ export function useCreateCrewAssignment() {
   });
 }
 
-export function useDeleteCrewAssignment() {
+export function useDeleteCrewAssignment(projectId?: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (assignmentId: number) => {
@@ -144,7 +144,11 @@ export function useDeleteCrewAssignment() {
       if (!response.ok) throw new Error("Failed to delete crew assignment");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["crew-assignments"] });
+      if (projectId) {
+        queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["crew-assignments"] });
+      }
     },
   });
 }

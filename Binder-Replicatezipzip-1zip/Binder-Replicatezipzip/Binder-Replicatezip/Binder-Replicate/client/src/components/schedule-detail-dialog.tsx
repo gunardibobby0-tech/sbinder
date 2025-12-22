@@ -34,12 +34,13 @@ export function ScheduleDetailDialog({
   const [conflictWarnings, setConflictWarnings] = useState<Record<number, { hasConflict: boolean; conflicts: Array<{ eventTitle: string; startTime: Date; endTime: Date }> }>>({});
   const [editData, setEditData] = useState<Partial<Event>>({});
   
-  const { data: crew = [], isLoading: crewLoading } = useCrewMaster();
+  const { data: masterCrew = [], isLoading: crewLoading } = useCrewMaster();
+  const { data: projectCrew = [], isLoading: projectCrewLoading } = useCrew(projectId || 0);
   const { data: assignments = [], isLoading: assignmentsLoading } = useCrewAssignments(projectId || 0);
   const { data: allEvents = [] } = useEvents(projectId || 0);
   const { mutate: createProjectCrew } = useCreateCrew();
   const { mutate: assignCrew, isPending: isAssigning } = useCreateCrewAssignment();
-  const { mutate: deleteCrew, isPending: isDeleting } = useDeleteCrewAssignment();
+  const { mutate: deleteCrew, isPending: isDeleting } = useDeleteCrewAssignment(projectId);
   const { mutate: checkConflicts } = useCheckCrewConflicts();
   const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
   const { mutate: createBudgetItem } = useCreateBudgetLineItem();
@@ -232,7 +233,7 @@ export function ScheduleDetailDialog({
               </Button>
             </div>
             <Card className="bg-black/20 border-white/10 p-4">
-              {crew.length === 0 ? (
+              {projectCrew.length === 0 ? (
                 <div className="space-y-3 py-4">
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground mb-3">No crew members added to this project yet.</p>
@@ -244,7 +245,7 @@ export function ScheduleDetailDialog({
               ) : (
                 <div className="space-y-2">
                   {eventAssignments.map((assignment) => {
-                    const crewMember = crew.find(c => c.id === assignment.crewId);
+                    const crewMember = projectCrew.find(c => c.id === assignment.crewId);
                     return (
                       <div key={assignment.id} className="flex items-center justify-between bg-black/20 p-3 rounded border border-white/5">
                         <div>
@@ -271,7 +272,7 @@ export function ScheduleDetailDialog({
             {assigningCrew && (
               <Card className="bg-black/20 border border-white/10 p-4">
                 <div className="space-y-3">
-                  {crew.length === 0 ? (
+                  {masterCrew.length === 0 ? (
                     <div className="text-sm text-muted-foreground text-center py-4">
                       <p className="mb-2">No crew members added to this project yet.</p>
                       <p className="text-xs">Add crew members in the Contacts section to assign them to events.</p>
@@ -280,8 +281,11 @@ export function ScheduleDetailDialog({
                     <>
                       <p className="text-sm font-medium text-white">Select crew members to assign:</p>
                       <div className="max-h-[200px] overflow-y-auto space-y-2">
-                        {crew.map((crewMember) => {
-                          const isAssigned = eventAssignments.some(a => a.crewId === crewMember.id);
+                        {masterCrew.map((crewMember) => {
+                          const isAssigned = eventAssignments.some(a => {
+                            const projectCrewMember = projectCrew.find(pc => pc.id === a.crewId);
+                            return projectCrewMember?.name === crewMember.name;
+                          });
                           const conflictData = conflictWarnings[crewMember.id!];
                           const hasConflict = conflictData?.hasConflict ? conflictData.conflicts : null;
                           return (
@@ -318,6 +322,7 @@ export function ScheduleDetailDialog({
                                                   { 
                                                     projectId, 
                                                     data: { 
+                                                      projectId,
                                                       crewId: newCrew.id,
                                                       eventId: event.id
                                                     } 
