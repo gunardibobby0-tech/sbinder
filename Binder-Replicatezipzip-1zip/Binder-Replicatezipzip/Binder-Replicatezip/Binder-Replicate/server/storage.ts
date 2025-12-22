@@ -554,14 +554,14 @@ export class DatabaseStorage implements IStorage {
 
     crewList.forEach(c => {
       if (c.pricing) {
-        const price = parseInt(c.pricing.replace(/[^0-9]/g, '')) || 0;
+        const price = parseFloat(c.pricing.replace(/[^\d.]/g, '')) || 0;
         crewCosts += price;
       }
     });
 
     equipmentList.forEach(e => {
       if (e.rentalCost) {
-        const cost = parseInt(e.rentalCost.replace(/[^0-9]/g, '')) || 0;
+        const cost = parseFloat(e.rentalCost.replace(/[^\d.]/g, '')) || 0;
         const qty = e.quantity || 1;
         equipmentCosts += cost * qty;
       }
