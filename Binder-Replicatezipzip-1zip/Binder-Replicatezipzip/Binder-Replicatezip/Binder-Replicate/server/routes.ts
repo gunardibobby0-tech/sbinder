@@ -315,10 +315,11 @@ export async function registerRoutes(
         )
       );
 
-      // Create CREW MASTER entries (job positions as templates)
+      // Create CREW entries (project-scoped crew members, not global masters)
       const createdCrewMaster = await Promise.all(
         newCrewSuggestions.map(c =>
-          storage.createCrewMaster({
+          storage.createCrew({
+            projectId,
             name: c.name, // Job title like "Director"
             title: c.name, // Job title
             department: c.department || c.name, // Use provided department or default to job title
@@ -327,11 +328,30 @@ export async function registerRoutes(
         )
       );
 
-      // Create schedule events
+      // Create schedule events respecting daysOfWeek preference
       const baseDate = dateRange?.startDate ? new Date(dateRange.startDate) : new Date();
       const createdEvents = await Promise.all(
         suggestions.schedule.map((s, idx) => {
-          const startTime = new Date(baseDate.getTime() + idx * 24 * 60 * 60 * 1000);
+          let eventDate = new Date(baseDate);
+          
+          // If daysOfWeek is specified, find the next occurrence of those days
+          if (daysOfWeek && daysOfWeek.length > 0) {
+            let daysAdded = 0;
+            while (daysAdded < idx && !daysOfWeek.includes(eventDate.getDay())) {
+              eventDate.setDate(eventDate.getDate() + 1);
+            }
+            // Move forward for schedule items beyond the first
+            for (let i = 0; i < idx; i++) {
+              do {
+                eventDate.setDate(eventDate.getDate() + 1);
+              } while (!daysOfWeek.includes(eventDate.getDay()));
+            }
+          } else {
+            // Default: space 1 day apart if no daysOfWeek specified
+            eventDate.setDate(eventDate.getDate() + idx);
+          }
+          
+          const startTime = new Date(eventDate);
           const endTime = new Date(startTime.getTime() + s.duration * 60 * 1000);
           return storage.createEvent({
             projectId,
