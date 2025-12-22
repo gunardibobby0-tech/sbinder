@@ -315,7 +315,41 @@ export function ScheduleDetailDialog({
                                                 { projectId, data: { eventId: event.id, crewId: newCrew.id } as any },
                                                 {
                                                   onSuccess: () => {
+                                                    // Auto-add budget line item based on crew compensation
+                                                    if (crewMember.costAmount && crewMember.paymentType) {
+                                                      const duration = differenceInMinutes(endTime, startTime);
+                                                      const hours = duration / 60;
+                                                      const days = Math.ceil(duration / (8 * 60)); // 8-hour work day
+                                                      
+                                                      let amount = 0;
+                                                      let description = `Crew: ${crewMember.name} - ${crewMember.title}`;
+                                                      
+                                                      if (crewMember.paymentType === "hourly") {
+                                                        amount = Math.ceil(hours * parseFloat(crewMember.costAmount));
+                                                        description += ` (${hours.toFixed(1)} hours)`;
+                                                      } else if (crewMember.paymentType === "daily") {
+                                                        amount = days * parseFloat(crewMember.costAmount);
+                                                        description += ` (${days} day${days > 1 ? 's' : ''})`;
+                                                      } else if (crewMember.paymentType === "fixed") {
+                                                        amount = parseFloat(crewMember.costAmount);
+                                                      }
+                                                      
+                                                      if (amount > 0) {
+                                                        createBudgetItem({
+                                                          projectId,
+                                                          data: {
+                                                            category: "Crew",
+                                                            description,
+                                                            amount: amount.toString(),
+                                                            status: "estimated",
+                                                            projectId,
+                                                          } as any,
+                                                        });
+                                                      }
+                                                    }
+                                                    
                                                     queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
+                                                    queryClient.invalidateQueries({ queryKey: ["budget-line-items", projectId] });
                                                     setConflictWarnings(prev => {
                                                       const updated = { ...prev };
                                                       delete updated[crewMember.id!];

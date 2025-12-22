@@ -2,6 +2,7 @@ import { useContacts, useCreateContact, useDeleteContact } from "@/hooks/use-con
 import { useCrew } from "@/hooks/use-crew";
 import { useCrewMaster, useCreateCrewMaster, useUpdateCrewMaster, useDeleteCrewMaster } from "@/hooks/use-crew-master";
 import { useCast, useCreateCast, useDeleteCast, useUpdateCast } from "@/hooks/use-cast";
+import { useCreateBudgetLineItem } from "@/hooks/use-budget";
 import { AssignActorDialog } from "@/components/assign-actor-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -866,6 +867,7 @@ function EditCrewMasterInlineDialog({ member, onClose }: { member: CrewMaster; o
 function EditCastDialog({ projectId, castItem, crewMaster, onClose }: { projectId: number; castItem: Cast; crewMaster: CrewMaster[]; onClose: () => void }) {
   const [open, setOpen] = useState(true);
   const updateCast = useUpdateCast();
+  const { mutate: createBudgetItem } = useCreateBudgetLineItem();
   
   const form = useForm<InsertCast>({
     resolver: zodResolver(insertCastSchema),
@@ -883,6 +885,26 @@ function EditCastDialog({ projectId, castItem, crewMaster, onClose }: { projectI
       { projectId, castId: castItem.id, data },
       {
         onSuccess: () => {
+          // Auto-add budget line item if talent with fixed compensation is assigned
+          if (data.crewMasterId) {
+            const assignedTalent = crewMaster.find(c => c.id === data.crewMasterId);
+            const previousTalent = crewMaster.find(c => c.id === castItem.crewMasterId);
+            
+            // Only add budget if this is a new assignment and talent has fixed compensation
+            if (assignedTalent && assignedTalent.costAmount && assignedTalent.paymentType === "fixed" && !castItem.crewMasterId) {
+              createBudgetItem({
+                projectId,
+                data: {
+                  category: "Cast",
+                  description: `Talent: ${assignedTalent.name} - ${castItem.role}`,
+                  amount: parseFloat(assignedTalent.costAmount).toString(),
+                  status: "estimated",
+                  projectId,
+                } as any,
+              });
+            }
+          }
+          
           setOpen(false);
           onClose();
         },
