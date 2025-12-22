@@ -293,60 +293,70 @@ export function ScheduleDetailDialog({
                           <button
                             onClick={() => {
                               if (!isAssigned && crewMember.id && event.id && projectId) {
-                                // Create minimal project crew entry
-                                createProjectCrew(
-                                  {
-                                    projectId,
-                                    data: {
-                                      projectId,
-                                      name: crewMember.name || "Unknown",
-                                      title: crewMember.title || crewMember.name || "Crew Member",
-                                      department: crewMember.department || "General",
-                                    },
-                                  },
-                                  {
-                                    onSuccess: (newCrew) => {
-                                      // Check conflicts with new crew
-                                      checkConflicts(
-                                        { projectId, crewId: newCrew.id, eventId: event.id },
-                                        {
-                                          onSuccess: (result) => {
-                                            setConflictWarnings(prev => ({
-                                              ...prev,
-                                              [crewMember.id!]: result
-                                            }));
-                                            if (!result.hasConflict) {
-                                              // Only assign if we have valid crew and event IDs
-                                              if (newCrew?.id && event?.id) {
-                                                assignCrew(
-                                                  { 
-                                                    projectId, 
-                                                    data: { 
-                                                      projectId,
-                                                      crewId: newCrew.id,
-                                                      eventId: event.id
-                                                    } 
-                                                  },
-                                                  {
-                                                    onSuccess: () => {
-                                                      queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
-                                                      setConflictWarnings(prev => {
-                                                        const updated = { ...prev };
-                                                        delete updated[crewMember.id!];
-                                                        return updated;
-                                                      });
-                                                      setAssigningCrew(false);
-                                                    },
-                                                  }
-                                                );
-                                              }
+                                // Check if crew member already exists by name
+                                const existingCrew = projectCrew.find(c => c.name === crewMember.name);
+                                const crewToUse = existingCrew ? existingCrew : null;
+                                
+                                const assignWithCrew = (crewId: number) => {
+                                  // Check conflicts with crew
+                                  checkConflicts(
+                                    { projectId, crewId, eventId: event.id },
+                                    {
+                                      onSuccess: (result) => {
+                                        setConflictWarnings(prev => ({
+                                          ...prev,
+                                          [crewMember.id!]: result
+                                        }));
+                                        if (!result.hasConflict) {
+                                          assignCrew(
+                                            { 
+                                              projectId, 
+                                              data: { 
+                                                projectId,
+                                                crewId,
+                                                eventId: event.id
+                                              } 
+                                            },
+                                            {
+                                              onSuccess: () => {
+                                                queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
+                                                setConflictWarnings(prev => {
+                                                  const updated = { ...prev };
+                                                  delete updated[crewMember.id!];
+                                                  return updated;
+                                                });
+                                                setAssigningCrew(false);
+                                              },
                                             }
-                                          },
+                                          );
                                         }
-                                      );
+                                      },
+                                    }
+                                  );
+                                };
+
+                                if (crewToUse) {
+                                  // Reuse existing crew member
+                                  assignWithCrew(crewToUse.id);
+                                } else {
+                                  // Create new crew member only if doesn't exist
+                                  createProjectCrew(
+                                    {
+                                      projectId,
+                                      data: {
+                                        projectId,
+                                        name: crewMember.name || "Unknown",
+                                        title: crewMember.title || crewMember.name || "Crew Member",
+                                        department: crewMember.department || "General",
+                                      },
                                     },
-                                  }
-                                );
+                                    {
+                                      onSuccess: (newCrew) => {
+                                        assignWithCrew(newCrew.id);
+                                      },
+                                    }
+                                  );
+                                }
                               }
                             }}
                             disabled={isAssigned || isAssigning}

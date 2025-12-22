@@ -17,13 +17,18 @@ export function CallSheetGenerator({ projectId, event, crew = [] }: CallSheetGen
   const { mutate: generateCallSheet, isPending } = useGenerateCallSheet();
   const [open, setOpen] = useState(false);
 
+  // Deduplicate crew by name to prevent duplicate entries in PDF
+  const uniqueCrew = Array.from(
+    new Map(crew.map(item => [item.name, item])).values()
+  );
+
   const handleGenerate = () => {
     generateCallSheet(
       {
         projectId,
         eventId: event.id,
         eventDetails: event,
-        crewMembers: crew,
+        crewMembers: uniqueCrew,
         equipmentList: [],
       },
       {
