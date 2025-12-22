@@ -8,7 +8,7 @@ import { format, differenceInMinutes } from "date-fns";
 import type { Event, Crew, CrewAssignment } from "@shared/schema";
 import { Clock, MapPin, Users, Plus, Trash2, Briefcase, AlertCircle } from "lucide-react";
 import { useState } from "react";
-import { useCrew, useCrewAssignments, useCreateCrewAssignment, useDeleteCrewAssignment, useCheckCrewConflicts } from "@/hooks/use-crew";
+import { useCrew, useCrewMaster, useCrewAssignments, useCreateCrewAssignment, useDeleteCrewAssignment, useCheckCrewConflicts } from "@/hooks/use-crew";
 import { useUpdateEvent } from "@/hooks/use-events";
 import { useEvents } from "@/hooks/use-events";
 import { useCreateBudgetLineItem } from "@/hooks/use-budget";
@@ -34,7 +34,7 @@ export function ScheduleDetailDialog({
   const [conflictWarnings, setConflictWarnings] = useState<Record<number, Array<{ eventTitle: string; startTime: Date; endTime: Date }>>>({});
   const [editData, setEditData] = useState<Partial<Event>>({});
   
-  const { data: crew = [], isLoading: crewLoading } = useCrew(projectId || 0);
+  const { data: crew = [], isLoading: crewLoading } = useCrewMaster();
   const { data: assignments = [], isLoading: assignmentsLoading } = useCrewAssignments(projectId || 0);
   const { data: allEvents = [] } = useEvents(projectId || 0);
   const { mutate: assignCrew, isPending: isAssigning } = useCreateCrewAssignment();
