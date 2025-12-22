@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { ScheduleDetailDialog } from "@/components/schedule-detail-dialog";
+import { CrewManagementDialog } from "@/components/crew-management-dialog";
 import { CrewAvailabilityCalendar } from "@/components/crew-availability-calendar";
 import { CallSheetGenerator } from "@/components/call-sheet-generator";
 import { LocationPicker } from "@/components/location-picker";
@@ -83,22 +84,24 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
           <h2 className="text-xl font-display font-bold text-white">Production Schedule</h2>
           <p className="text-sm text-muted-foreground mt-1">Manage your shoots, scouts, and meetings</p>
         </div>
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
-              <Plus className="w-4 h-4" />
-              New Event
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-[#1c2128] border-white/10 text-white">
-            <DialogHeader>
-              <DialogTitle>Create Event</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onCreateEvent)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="title"
+        <div className="flex gap-2">
+          <CrewManagementDialog projectId={projectId} crew={crew} isLoading={false} />
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
+                <Plus className="w-4 h-4" />
+                New Event
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#1c2128] border-white/10 text-white">
+              <DialogHeader>
+                <DialogTitle>Create Event</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onCreateEvent)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="title"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Title</FormLabel>
@@ -187,10 +190,11 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                 <Button type="submit" disabled={isCreating} className="w-full bg-primary hover:bg-primary/90">
                   Create Event
                 </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "calendar")} className="w-full">
