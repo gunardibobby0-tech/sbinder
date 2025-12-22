@@ -232,7 +232,6 @@ export function ScheduleDetailDialog({
                 variant="outline"
                 onClick={() => setAssigningCrew(true)}
                 className="border-primary/50 hover:border-primary text-primary hover:text-primary"
-                disabled={crew.length === 0}
               >
                 <Plus className="w-3 h-3 mr-1" />
                 Add Crew
@@ -268,16 +267,23 @@ export function ScheduleDetailDialog({
             </Card>
 
             {/* Crew Selection Modal */}
-            {assigningCrew && crew.length > 0 && (
+            {assigningCrew && (
               <Card className="bg-black/20 border border-white/10 p-4">
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-white">Select crew members to assign:</p>
-                  <div className="max-h-[200px] overflow-y-auto space-y-2">
-                    {crew.map((crewMember) => {
-                      const isAssigned = eventAssignments.some(a => a.crewId === crewMember.id);
-                      const hasConflict = conflictWarnings[crewMember.id!];
-                      return (
-                        <div key={crewMember.id}>
+                  {crew.length === 0 ? (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      <p className="mb-2">No crew members added to this project yet.</p>
+                      <p className="text-xs">Add crew members in the Contacts section to assign them to events.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-white">Select crew members to assign:</p>
+                      <div className="max-h-[200px] overflow-y-auto space-y-2">
+                        {crew.map((crewMember) => {
+                          const isAssigned = eventAssignments.some(a => a.crewId === crewMember.id);
+                          const hasConflict = conflictWarnings[crewMember.id!];
+                          return (
+                            <div key={crewMember.id}>
                           <button
                             onClick={() => {
                               if (!isAssigned && crewMember.id && event.id && projectId) {
@@ -350,10 +356,12 @@ export function ScheduleDetailDialog({
                               </div>
                             </div>
                           )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
