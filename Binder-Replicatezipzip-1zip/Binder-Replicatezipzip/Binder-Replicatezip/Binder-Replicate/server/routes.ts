@@ -739,16 +739,18 @@ Return only JSON array of IDs by relevance: [1,3,5]`
 
   app.post("/api/projects/:projectId/budget/line-items", async (req, res) => {
     try {
-      const { category, description, amount, status } = req.body;
+      const { category, description, amount, status, isAutoCalculated } = req.body;
       const item = await storage.createBudgetLineItem({
         projectId: Number(req.params.projectId),
         category,
         description,
         amount,
         status,
+        isAutoCalculated: isAutoCalculated ?? false,
       });
       res.status(201).json(item);
-    } catch {
+    } catch (err) {
+      console.error("Budget line item creation error:", err);
       res.status(500).json({ error: "Failed to create line item" });
     }
   });
