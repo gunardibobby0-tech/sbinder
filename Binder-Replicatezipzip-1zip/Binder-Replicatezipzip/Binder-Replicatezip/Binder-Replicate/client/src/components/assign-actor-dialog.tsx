@@ -6,7 +6,7 @@ import { t } from "@/lib/i18n";
 import { Loader2, User } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { Contact } from "@shared/schema";
+import type { Cast } from "@shared/schema";
 
 export function AssignActorDialog({
   contact,
@@ -15,7 +15,7 @@ export function AssignActorDialog({
   onAssign,
   isLoading,
 }: {
-  contact: Contact | null;
+  contact: Cast | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAssign: (actorName: string) => Promise<void>;
@@ -43,7 +43,7 @@ export function AssignActorDialog({
       onOpenChange(false);
       toast({
         title: "Success",
-        description: `${contact.name} assigned to ${actorName}`,
+        description: `${contact.role} assigned to ${actorName}`,
       });
     } catch (error) {
       toast({
@@ -66,9 +66,9 @@ export function AssignActorDialog({
 
         <div className="space-y-4 pt-4">
           <div className="bg-black/30 p-4 rounded-lg border border-white/10">
-            <p className="text-sm text-muted-foreground mb-1">Character/Role</p>
-            <p className="text-lg font-semibold text-white">{contact.name}</p>
-            <p className="text-sm text-blue-400 mt-1">{contact.role}</p>
+            <p className="text-sm text-muted-foreground mb-1">Role</p>
+            <p className="text-lg font-semibold text-white">{contact.role}</p>
+            <p className="text-sm text-blue-400 mt-1">{contact.roleType}</p>
           </div>
 
           <div>
