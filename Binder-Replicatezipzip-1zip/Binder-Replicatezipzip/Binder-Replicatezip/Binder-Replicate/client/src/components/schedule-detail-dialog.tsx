@@ -231,8 +231,15 @@ export function ScheduleDetailDialog({
               </Button>
             </div>
             <Card className="bg-black/20 border-white/10 p-4">
-              {eventAssignments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No crew assigned. Click "Add Crew" to assign from master list.</p>
+              {crew.length === 0 ? (
+                <div className="space-y-3 py-4">
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-3">No crew members added to this project yet.</p>
+                    <p className="text-xs text-muted-foreground mb-4">You need to add crew to your project first. Go to the Schedule tab and click "Manage Crew Members" to add team members.</p>
+                  </div>
+                </div>
+              ) : eventAssignments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No crew assigned. Click "Add Crew" to assign from your crew list.</p>
               ) : (
                 <div className="space-y-2">
                   {eventAssignments.map((assignment) => {
