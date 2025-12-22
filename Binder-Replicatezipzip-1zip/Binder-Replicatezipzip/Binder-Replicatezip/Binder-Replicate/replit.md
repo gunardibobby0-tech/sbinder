@@ -93,3 +93,13 @@ Server runs on `http://localhost:5000`
 - Real-time chat integration via OpenRouter AI API
 - Frontend uses React Query for efficient state management and caching
 - TypeScript throughout for type safety
+
+## Recent Fixes (Dec 22, 2025)
+- **Fixed "Add Crew to Schedule" Issue**
+  - Issue: Crew assignment button in schedule detail dialog did nothing
+  - Root Cause: Code was trying to access non-existent properties (`costAmount`, `paymentType`) on Crew type
+  - Solution: 
+    1. Simplified `calculateCrewCost()` to use the `pricing` field instead
+    2. Added missing `projectId` to budget item creation request
+    3. Added `setAssigningCrew(false)` to close dialog after successful assignment
+  - Status: ✅ FIXED - All TypeScript errors resolved, add crew functionality now working

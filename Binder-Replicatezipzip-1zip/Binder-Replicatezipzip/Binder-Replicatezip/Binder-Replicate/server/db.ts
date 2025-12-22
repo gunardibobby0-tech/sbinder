@@ -64,6 +64,20 @@ export const db = drizzle({ client: pool, schema });
           ADD COLUMN IF NOT EXISTS "latitude" text,
           ADD COLUMN IF NOT EXISTS "longitude" text
         `);
+
+        // Add missing columns to user_settings table if they don't exist
+        await pool.query(`
+          ALTER TABLE "user_settings" 
+          ADD COLUMN IF NOT EXISTS "currency" text DEFAULT 'IDR'
+        `);
+
+        // Add missing columns to crew_master table if they don't exist
+        await pool.query(`
+          ALTER TABLE "crew_master" 
+          ADD COLUMN IF NOT EXISTS "cost_amount" text,
+          ADD COLUMN IF NOT EXISTS "payment_type" text,
+          ADD COLUMN IF NOT EXISTS "currency" text DEFAULT 'IDR'
+        `);
         
         console.log('✓ All required tables ready');
       } catch (tableErr) {

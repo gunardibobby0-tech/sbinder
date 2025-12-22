@@ -54,15 +54,8 @@ export function ScheduleDetailDialog({
 
   // Calculate crew cost estimate
   const calculateCrewCost = (crewMember: Crew) => {
-    if (!crewMember.costAmount || !crewMember.paymentType) return null;
-    const amount = parseFloat(crewMember.costAmount);
-    if (crewMember.paymentType === "hourly") {
-      const totalMinutes = allEvents.reduce((sum, e) => sum + differenceInMinutes(new Date(e.endTime), new Date(e.startTime)), 0);
-      return Math.round((totalMinutes / 60) * amount);
-    } else if (crewMember.paymentType === "daily") {
-      return Math.round(amount * calculateProjectDuration());
-    }
-    return amount; // fixed
+    if (!crewMember.pricing) return null;
+    return Math.round(parseFloat(crewMember.pricing));
   };
 
   const eventAssignments = assignments.filter(a => a.eventId === event?.id);
@@ -232,15 +225,21 @@ export function ScheduleDetailDialog({
                 variant="outline"
                 onClick={() => setAssigningCrew(true)}
                 className="border-primary/50 hover:border-primary text-primary hover:text-primary"
-                disabled={crew.length === 0 || isEditing}
               >
                 <Plus className="w-3 h-3 mr-1" />
                 Add Crew
               </Button>
             </div>
             <Card className="bg-black/20 border-white/10 p-4">
-              {eventAssignments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No crew assigned. Click "Add Crew" to assign from master list.</p>
+              {crew.length === 0 ? (
+                <div className="space-y-3 py-4">
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-3">No crew members added to this project yet.</p>
+                    <p className="text-xs text-muted-foreground mb-4">You need to add crew to your project first. Go to the Schedule tab and click "Manage Crew Members" to add team members.</p>
+                  </div>
+                </div>
+              ) : eventAssignments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No crew assigned. Click "Add Crew" to assign from your crew list.</p>
               ) : (
                 <div className="space-y-2">
                   {eventAssignments.map((assignment) => {
@@ -268,16 +267,23 @@ export function ScheduleDetailDialog({
             </Card>
 
             {/* Crew Selection Modal */}
-            {assigningCrew && crew.length > 0 && (
+            {assigningCrew && (
               <Card className="bg-black/20 border border-white/10 p-4">
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-white">Select crew members to assign:</p>
-                  <div className="max-h-[200px] overflow-y-auto space-y-2">
-                    {crew.map((crewMember) => {
-                      const isAssigned = eventAssignments.some(a => a.crewId === crewMember.id);
-                      const hasConflict = conflictWarnings[crewMember.id!];
-                      return (
-                        <div key={crewMember.id}>
+                  {crew.length === 0 ? (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      <p className="mb-2">No crew members added to this project yet.</p>
+                      <p className="text-xs">Add crew members in the Contacts section to assign them to events.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-white">Select crew members to assign:</p>
+                      <div className="max-h-[200px] overflow-y-auto space-y-2">
+                        {crew.map((crewMember) => {
+                          const isAssigned = eventAssignments.some(a => a.crewId === crewMember.id);
+                          const hasConflict = conflictWarnings[crewMember.id!];
+                          return (
+                            <div key={crewMember.id}>
                           <button
                             onClick={() => {
                               if (!isAssigned && crewMember.id && event.id && projectId) {
@@ -301,8 +307,9 @@ export function ScheduleDetailDialog({
                                                   {
                                                     projectId,
                                                     data: {
+                                                      projectId,
                                                       category: "Crew",
-                                                      description: `${crewMember.name} - ${crewMember.title} (${crewMember.paymentType})`,
+                                                      description: `${crewMember.name} - ${crewMember.title}`,
                                                       amount: estimatedCost.toString(),
                                                       status: "estimated",
                                                     },
@@ -315,6 +322,7 @@ export function ScheduleDetailDialog({
                                                 delete updated[crewMember.id!];
                                                 return updated;
                                               });
+                                              setAssigningCrew(false);
                                             },
                                           }
                                         );
@@ -350,10 +358,12 @@ export function ScheduleDetailDialog({
                               </div>
                             </div>
                           )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"

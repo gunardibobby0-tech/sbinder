@@ -480,7 +480,17 @@ export async function registerRoutes(
     try {
       const eventId = Number(req.params.id);
       const input = req.body;
-      const event = await storage.updateEvent(eventId, input);
+      
+      // Convert ISO strings to Date objects if needed
+      const data: any = { ...input };
+      if (typeof data.startTime === 'string') {
+        data.startTime = new Date(data.startTime);
+      }
+      if (typeof data.endTime === 'string') {
+        data.endTime = new Date(data.endTime);
+      }
+      
+      const event = await storage.updateEvent(eventId, data);
       res.json(event);
     } catch (err) {
       if (err instanceof z.ZodError) {
