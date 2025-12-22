@@ -554,16 +554,22 @@ export class DatabaseStorage implements IStorage {
 
     crewList.forEach(c => {
       if (c.pricing) {
-        const price = parseFloat(c.pricing.replace(/[^\d.]/g, '')) || 0;
-        crewCosts += price;
+        const numericStr = c.pricing.replace(/[^\d.]/g, '');
+        const price = numericStr ? parseFloat(numericStr) : 0;
+        if (!Number.isNaN(price)) {
+          crewCosts += price;
+        }
       }
     });
 
     equipmentList.forEach(e => {
       if (e.rentalCost) {
-        const cost = parseFloat(e.rentalCost.replace(/[^\d.]/g, '')) || 0;
-        const qty = e.quantity || 1;
-        equipmentCosts += cost * qty;
+        const numericStr = e.rentalCost.replace(/[^\d.]/g, '');
+        const cost = numericStr ? parseFloat(numericStr) : 0;
+        if (!Number.isNaN(cost)) {
+          const qty = e.quantity || 1;
+          equipmentCosts += cost * qty;
+        }
       }
     });
 
