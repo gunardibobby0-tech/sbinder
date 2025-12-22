@@ -288,22 +288,19 @@ export function ScheduleDetailDialog({
                           <button
                             onClick={() => {
                               if (!isAssigned && crewMember.id && event.id && projectId) {
-                                // First, auto-add crew member to project if not already there
+                                // Create minimal project crew entry
                                 createProjectCrew(
                                   {
                                     projectId,
                                     data: {
-                                      name: crewMember.name,
-                                      title: crewMember.title,
-                                      department: (crewMember.department || "") as string,
-                                      notes: crewMember.notes || "",
-                                      contact: (crewMember.email || crewMember.phone || "") as string,
-                                      pricing: "",
-                                    } as any,
+                                      name: crewMember.name || "Unknown",
+                                      title: crewMember.title || crewMember.name || "Crew Member",
+                                      department: crewMember.department || "General",
+                                    },
                                   },
                                   {
                                     onSuccess: (newCrew) => {
-                                      // Now check for conflicts with the new crew entry
+                                      // Check conflicts with new crew
                                       checkConflicts(
                                         { projectId, crewId: newCrew.id, eventId: event.id },
                                         {
@@ -315,34 +312,18 @@ export function ScheduleDetailDialog({
                                             if (!result.hasConflict) {
                                               assignCrew(
                                                 { projectId, data: { eventId: event.id, crewId: newCrew.id } as any },
-                                              {
-                                                onSuccess: () => {
-                                                  // Auto-create budget line item
-                                                  const estimatedCost = calculateCrewCost(crewMember as any);
-                                                  if (estimatedCost && projectId) {
-                                                    createBudgetItem(
-                                                      {
-                                                        projectId,
-                                                        data: {
-                                                          projectId,
-                                                          category: "Crew",
-                                                          description: `${crewMember.name} - ${crewMember.title}`,
-                                                          amount: estimatedCost.toString(),
-                                                          status: "estimated",
-                                                        },
-                                                      }
-                                                    );
-                                                  }
-                                                  queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
-                                                  setConflictWarnings(prev => {
-                                                    const updated = { ...prev };
-                                                    delete updated[crewMember.id!];
-                                                    return updated;
-                                                  });
-                                                  setAssigningCrew(false);
-                                                },
-                                              }
-                                            );
+                                                {
+                                                  onSuccess: () => {
+                                                    queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
+                                                    setConflictWarnings(prev => {
+                                                      const updated = { ...prev };
+                                                      delete updated[crewMember.id!];
+                                                      return updated;
+                                                    });
+                                                    setAssigningCrew(false);
+                                                  },
+                                                }
+                                              );
                                             }
                                           },
                                         }

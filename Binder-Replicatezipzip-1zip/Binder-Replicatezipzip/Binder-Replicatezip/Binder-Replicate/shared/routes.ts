@@ -262,7 +262,7 @@ export const api = {
     create: {
       method: 'POST' as const,
       path: '/api/projects/:projectId/crew',
-      input: insertCrewSchema,
+      input: insertCrewSchema.omit({ projectId: true }),
       responses: {
         201: z.custom<typeof crew.$inferSelect>(),
         400: errorSchemas.validation,
