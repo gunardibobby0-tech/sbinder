@@ -54,15 +54,8 @@ export function ScheduleDetailDialog({
 
   // Calculate crew cost estimate
   const calculateCrewCost = (crewMember: Crew) => {
-    if (!crewMember.costAmount || !crewMember.paymentType) return null;
-    const amount = parseFloat(crewMember.costAmount);
-    if (crewMember.paymentType === "hourly") {
-      const totalMinutes = allEvents.reduce((sum, e) => sum + differenceInMinutes(new Date(e.endTime), new Date(e.startTime)), 0);
-      return Math.round((totalMinutes / 60) * amount);
-    } else if (crewMember.paymentType === "daily") {
-      return Math.round(amount * calculateProjectDuration());
-    }
-    return amount; // fixed
+    if (!crewMember.pricing) return null;
+    return Math.round(parseFloat(crewMember.pricing));
   };
 
   const eventAssignments = assignments.filter(a => a.eventId === event?.id);
@@ -307,8 +300,9 @@ export function ScheduleDetailDialog({
                                                   {
                                                     projectId,
                                                     data: {
+                                                      projectId,
                                                       category: "Crew",
-                                                      description: `${crewMember.name} - ${crewMember.title} (${crewMember.paymentType})`,
+                                                      description: `${crewMember.name} - ${crewMember.title}`,
                                                       amount: estimatedCost.toString(),
                                                       status: "estimated",
                                                     },
@@ -321,6 +315,7 @@ export function ScheduleDetailDialog({
                                                 delete updated[crewMember.id!];
                                                 return updated;
                                               });
+                                              setAssigningCrew(false);
                                             },
                                           }
                                         );
