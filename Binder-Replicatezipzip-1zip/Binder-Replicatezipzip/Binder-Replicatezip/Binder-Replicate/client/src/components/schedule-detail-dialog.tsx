@@ -31,7 +31,7 @@ export function ScheduleDetailDialog({
 }: ScheduleDetailDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [assigningCrew, setAssigningCrew] = useState(false);
-  const [conflictWarnings, setConflictWarnings] = useState<Record<number, Array<{ eventTitle: string; startTime: Date; endTime: Date }>>>({});
+  const [conflictWarnings, setConflictWarnings] = useState<Record<number, { hasConflict: boolean; conflicts: Array<{ eventTitle: string; startTime: Date; endTime: Date }> }>>({});
   const [editData, setEditData] = useState<Partial<Event>>({});
   
   const { data: crew = [], isLoading: crewLoading } = useCrewMaster();
@@ -282,7 +282,8 @@ export function ScheduleDetailDialog({
                       <div className="max-h-[200px] overflow-y-auto space-y-2">
                         {crew.map((crewMember) => {
                           const isAssigned = eventAssignments.some(a => a.crewId === crewMember.id);
-                          const hasConflict = conflictWarnings[crewMember.id!];
+                          const conflictData = conflictWarnings[crewMember.id!];
+                          const hasConflict = conflictData?.hasConflict ? conflictData.conflicts : null;
                           return (
                             <div key={crewMember.id}>
                           <button
@@ -307,7 +308,7 @@ export function ScheduleDetailDialog({
                                           onSuccess: (result) => {
                                             setConflictWarnings(prev => ({
                                               ...prev,
-                                              [crewMember.id!]: result.conflicts
+                                              [crewMember.id!]: result
                                             }));
                                             if (!result.hasConflict) {
                                               assignCrew(
