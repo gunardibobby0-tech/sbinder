@@ -312,20 +312,29 @@ export function ScheduleDetailDialog({
                                               [crewMember.id!]: result
                                             }));
                                             if (!result.hasConflict) {
-                                              assignCrew(
-                                                { projectId, data: { eventId: event.id, crewId: newCrew.id } as any },
-                                                {
-                                                  onSuccess: () => {
-                                                    queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
-                                                    setConflictWarnings(prev => {
-                                                      const updated = { ...prev };
-                                                      delete updated[crewMember.id!];
-                                                      return updated;
-                                                    });
-                                                    setAssigningCrew(false);
+                                              // Only assign if we have valid crew and event IDs
+                                              if (newCrew?.id && event?.id) {
+                                                assignCrew(
+                                                  { 
+                                                    projectId, 
+                                                    data: { 
+                                                      crewId: newCrew.id,
+                                                      eventId: event.id
+                                                    } 
                                                   },
-                                                }
-                                              );
+                                                  {
+                                                    onSuccess: () => {
+                                                      queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
+                                                      setConflictWarnings(prev => {
+                                                        const updated = { ...prev };
+                                                        delete updated[crewMember.id!];
+                                                        return updated;
+                                                      });
+                                                      setAssigningCrew(false);
+                                                    },
+                                                  }
+                                                );
+                                              }
                                             }
                                           },
                                         }
