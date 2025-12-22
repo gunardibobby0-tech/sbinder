@@ -466,6 +466,10 @@ export class DatabaseStorage implements IStorage {
     console.log(`[CONFLICT CHECK] Assigned events:`, assignedEvents);
 
     const conflicts = assignedEvents.filter(evt => {
+      // Skip self-conflict: exclude the event being checked
+      if (evt.id === eventId) {
+        return false;
+      }
       const hasConflict = (target.startTime < evt.endTime) && (target.endTime > evt.startTime);
       console.log(`[CONFLICT CHECK] Event ${evt.id} ${evt.title}: ${hasConflict ? 'CONFLICT' : 'no conflict'}`);
       return hasConflict;

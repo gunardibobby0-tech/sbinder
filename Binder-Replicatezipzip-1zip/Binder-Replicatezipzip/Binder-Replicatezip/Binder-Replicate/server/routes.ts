@@ -19,7 +19,10 @@ export async function registerRoutes(
 
   // === Settings ===
   app.get(api.settings.get.path, async (req, res) => {
-    const userId = (req.user as any)?.id || "user_1";
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const settings = await storage.getUserSettings(userId);
     res.json({
       openaiKey: settings?.openrouterToken ? "***" : undefined,
@@ -38,7 +41,10 @@ export async function registerRoutes(
   });
 
   app.put(api.settings.update.path, async (req, res) => {
-    const userId = (req.user as any)?.id || "user_1";
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     try {
       const input = z.object({ 
         openaiKey: z.string().optional(),
@@ -287,14 +293,14 @@ export async function registerRoutes(
 
       // Get existing cast to check for duplicates
       const existingCast = await storage.getCast(projectId);
-      const existingCastNames = new Set(existingCast.map(c => c.role.toLowerCase()));
+      const existingCastCharacterNames = new Set(existingCast.map(c => c.role.toLowerCase())); // Cast.role contains character name
       
       // Get existing crew master to check for duplicates
       const existingCrewMaster = await storage.getCrewMaster();
-      const existingCrewNames = new Set(existingCrewMaster.map(c => c.name.toLowerCase()));
+      const existingCrewNames = new Set(existingCrewMaster.map(c => c.name.toLowerCase())); // CrewMaster.name contains job title
 
-      // Filter out duplicates
-      const newCastSuggestions = suggestions.cast.filter(c => !existingCastNames.has(c.name.toLowerCase()));
+      // Filter out duplicates - cast suggestions matched by character name (stored in cast.role)
+      const newCastSuggestions = suggestions.cast.filter(c => !existingCastCharacterNames.has(c.name.toLowerCase()));
       const newCrewSuggestions = suggestions.crew.filter(c => !existingCrewNames.has(c.name.toLowerCase()));
 
       // Create CAST entries (characters from script)
@@ -653,9 +659,14 @@ Return only JSON array of IDs by relevance: [1,3,5]`
       
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content || "[]";
-      const ids = JSON.parse(content);
-      const suggested = existingCrew.filter(c => ids.includes(c.id));
-      res.json(suggested.length > 0 ? suggested : existingCrew.slice(0, 3));
+      try {
+        const ids = JSON.parse(content);
+        const suggested = existingCrew.filter(c => ids.includes(c.id));
+        res.json(suggested.length > 0 ? suggested : existingCrew.slice(0, 3));
+      } catch (parseError) {
+        console.error("Failed to parse crew suggestion JSON:", parseError);
+        res.json(existingCrew.slice(0, 3));
+      }
     } catch (error) {
       const existingCrew = await storage.getCrew(Number(req.params.projectId));
       res.json(existingCrew.slice(0, 3));
@@ -742,11 +753,18 @@ Return only JSON array of IDs by relevance: [1,3,5]`
   app.post("/api/projects/:projectId/budget/line-items", async (req, res) => {
     try {
       const { category, description, amount, status, isAutoCalculated } = req.body;
+      
+      // Validate amount is a number
+      const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+      if (typeof numAmount !== 'number' || Number.isNaN(numAmount)) {
+        return res.status(400).json({ error: "Amount must be a valid number" });
+      }
+      
       const item = await storage.createBudgetLineItem({
         projectId: Number(req.params.projectId),
         category,
         description,
-        amount,
+        amount: numAmount.toString(),
         status,
         isAutoCalculated: isAutoCalculated ?? false,
       });
