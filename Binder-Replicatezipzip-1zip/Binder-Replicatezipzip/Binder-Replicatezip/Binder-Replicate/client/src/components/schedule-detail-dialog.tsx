@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { format } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import type { Event, Crew, CrewAssignment } from "@shared/schema";
 import { Clock, MapPin, Users, Plus, Trash2, Briefcase, AlertCircle } from "lucide-react";
 import { useState } from "react";
-import { useCrew, useCrewAssignments, useCreateCrewAssignment, useDeleteCrewAssignment, useCheckCrewConflicts } from "@/hooks/use-crew";
+import { useCrew, useCrewMaster, useCrewAssignments, useCreateCrew, useCreateCrewAssignment, useDeleteCrewAssignment, useCheckCrewConflicts } from "@/hooks/use-crew";
 import { useUpdateEvent } from "@/hooks/use-events";
+import { useEvents } from "@/hooks/use-events";
+import { useCreateBudgetLineItem } from "@/hooks/use-budget";
+import { useSettings } from "@/hooks/use-settings";
 import { useQueryClient } from "@tanstack/react-query";
 import { LocationPicker } from "@/components/location-picker";
 
@@ -28,16 +31,33 @@ export function ScheduleDetailDialog({
 }: ScheduleDetailDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [assigningCrew, setAssigningCrew] = useState(false);
-  const [conflictWarnings, setConflictWarnings] = useState<Record<number, Array<{ eventTitle: string; startTime: Date; endTime: Date }>>>({});
+  const [conflictWarnings, setConflictWarnings] = useState<Record<number, { hasConflict: boolean; conflicts: Array<{ eventTitle: string; startTime: Date; endTime: Date }> }>>({});
   const [editData, setEditData] = useState<Partial<Event>>({});
   
-  const { data: crew = [], isLoading: crewLoading } = useCrew(projectId || 0);
+  const { data: crew = [], isLoading: crewLoading } = useCrewMaster();
   const { data: assignments = [], isLoading: assignmentsLoading } = useCrewAssignments(projectId || 0);
+  const { data: allEvents = [] } = useEvents(projectId || 0);
+  const { mutate: createProjectCrew } = useCreateCrew();
   const { mutate: assignCrew, isPending: isAssigning } = useCreateCrewAssignment();
   const { mutate: deleteCrew, isPending: isDeleting } = useDeleteCrewAssignment();
   const { mutate: checkConflicts } = useCheckCrewConflicts();
   const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
+  const { mutate: createBudgetItem } = useCreateBudgetLineItem();
+  const { settings } = useSettings();
   const queryClient = useQueryClient();
+
+  // Calculate project duration in days
+  const calculateProjectDuration = () => {
+    if (!allEvents || allEvents.length === 0) return 1;
+    const totalMinutes = allEvents.reduce((sum, e) => sum + differenceInMinutes(new Date(e.endTime), new Date(e.startTime)), 0);
+    return Math.max(1, Math.ceil(totalMinutes / (8 * 60))); // Assume 8-hour work day
+  };
+
+  // Calculate crew cost estimate
+  const calculateCrewCost = (crewMember: Crew) => {
+    if (!crewMember.pricing) return null;
+    return Math.round(parseFloat(crewMember.pricing));
+  };
 
   const eventAssignments = assignments.filter(a => a.eventId === event?.id);
 
@@ -60,18 +80,26 @@ export function ScheduleDetailDialog({
 
   const handleSaveChanges = () => {
     if (event.id && projectId) {
+      const getTimeString = (value: any, fallback: any): string => {
+        if (!value) return typeof fallback === 'string' ? fallback : new Date(fallback).toISOString();
+        if (value instanceof Date) return value.toISOString();
+        return value;
+      };
+      const startTime = getTimeString(editData.startTime, event.startTime);
+      const endTime = getTimeString(editData.endTime, event.endTime);
+      
       updateEvent(
         {
           projectId,
           eventId: event.id,
           data: {
             title: editData.title || event.title,
-            description: editData.description || event.description,
+            description: editData.description ?? event.description,
             latitude: editData.latitude,
             longitude: editData.longitude,
-            startTime: editData.startTime || event.startTime,
-            endTime: editData.endTime || event.endTime,
-          },
+            startTime,
+            endTime,
+          } as any,
         },
         {
           onSuccess: () => {
@@ -153,7 +181,7 @@ export function ScheduleDetailDialog({
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Location Notes</label>
                 <Textarea
-                  value={editData.description || event.description || ""}
+                  value={(editData.description ?? event.description) || ""}
                   onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                   className="bg-black/20 border-white/10 text-white mt-1 resize-none"
                   rows={2}
@@ -177,8 +205,8 @@ export function ScheduleDetailDialog({
                 Location (Coordinates)
               </h3>
               <LocationPicker
-                latitude={editData.latitude}
-                longitude={editData.longitude}
+                latitude={(editData.latitude ?? null) as any}
+                longitude={(editData.longitude ?? null) as any}
                 onLocationChange={(lat, lng) => {
                   setEditData({ ...editData, latitude: lat, longitude: lng });
                 }}
@@ -198,15 +226,21 @@ export function ScheduleDetailDialog({
                 variant="outline"
                 onClick={() => setAssigningCrew(true)}
                 className="border-primary/50 hover:border-primary text-primary hover:text-primary"
-                disabled={crew.length === 0 || isEditing}
               >
                 <Plus className="w-3 h-3 mr-1" />
                 Add Crew
               </Button>
             </div>
             <Card className="bg-black/20 border-white/10 p-4">
-              {eventAssignments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No crew assigned. Click "Add Crew" to assign from master list.</p>
+              {crew.length === 0 ? (
+                <div className="space-y-3 py-4">
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-3">No crew members added to this project yet.</p>
+                    <p className="text-xs text-muted-foreground mb-4">You need to add crew to your project first. Go to the Schedule tab and click "Manage Crew Members" to add team members.</p>
+                  </div>
+                </div>
+              ) : eventAssignments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No crew assigned. Click "Add Crew" to assign from your crew list.</p>
               ) : (
                 <div className="space-y-2">
                   {eventAssignments.map((assignment) => {
@@ -234,42 +268,67 @@ export function ScheduleDetailDialog({
             </Card>
 
             {/* Crew Selection Modal */}
-            {assigningCrew && crew.length > 0 && (
+            {assigningCrew && (
               <Card className="bg-black/20 border border-white/10 p-4">
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-white">Select crew members to assign:</p>
-                  <div className="max-h-[200px] overflow-y-auto space-y-2">
-                    {crew.map((crewMember) => {
-                      const isAssigned = eventAssignments.some(a => a.crewId === crewMember.id);
-                      const hasConflict = conflictWarnings[crewMember.id!];
-                      return (
-                        <div key={crewMember.id}>
+                  {crew.length === 0 ? (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      <p className="mb-2">No crew members added to this project yet.</p>
+                      <p className="text-xs">Add crew members in the Contacts section to assign them to events.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-white">Select crew members to assign:</p>
+                      <div className="max-h-[200px] overflow-y-auto space-y-2">
+                        {crew.map((crewMember) => {
+                          const isAssigned = eventAssignments.some(a => a.crewId === crewMember.id);
+                          const conflictData = conflictWarnings[crewMember.id!];
+                          const hasConflict = conflictData?.hasConflict ? conflictData.conflicts : null;
+                          return (
+                            <div key={crewMember.id}>
                           <button
                             onClick={() => {
                               if (!isAssigned && crewMember.id && event.id && projectId) {
-                                checkConflicts(
-                                  { projectId, crewId: crewMember.id, eventId: event.id },
+                                // Create minimal project crew entry
+                                createProjectCrew(
                                   {
-                                    onSuccess: (result) => {
-                                      setConflictWarnings(prev => ({
-                                        ...prev,
-                                        [crewMember.id!]: result.conflicts
-                                      }));
-                                      if (!result.hasConflict) {
-                                        assignCrew(
-                                          { projectId, data: { projectId, eventId: event.id, crewId: crewMember.id! } },
-                                          {
-                                            onSuccess: () => {
-                                              queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
-                                              setConflictWarnings(prev => {
-                                                const updated = { ...prev };
-                                                delete updated[crewMember.id!];
-                                                return updated;
-                                              });
-                                            },
-                                          }
-                                        );
-                                      }
+                                    projectId,
+                                    data: {
+                                      name: crewMember.name || "Unknown",
+                                      title: crewMember.title || crewMember.name || "Crew Member",
+                                      department: crewMember.department || "General",
+                                    },
+                                  },
+                                  {
+                                    onSuccess: (newCrew) => {
+                                      // Check conflicts with new crew
+                                      checkConflicts(
+                                        { projectId, crewId: newCrew.id, eventId: event.id },
+                                        {
+                                          onSuccess: (result) => {
+                                            setConflictWarnings(prev => ({
+                                              ...prev,
+                                              [crewMember.id!]: result
+                                            }));
+                                            if (!result.hasConflict) {
+                                              assignCrew(
+                                                { projectId, data: { eventId: event.id, crewId: newCrew.id } as any },
+                                                {
+                                                  onSuccess: () => {
+                                                    queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
+                                                    setConflictWarnings(prev => {
+                                                      const updated = { ...prev };
+                                                      delete updated[crewMember.id!];
+                                                      return updated;
+                                                    });
+                                                    setAssigningCrew(false);
+                                                  },
+                                                }
+                                              );
+                                            }
+                                          },
+                                        }
+                                      );
                                     },
                                   }
                                 );
@@ -301,10 +360,12 @@ export function ScheduleDetailDialog({
                               </div>
                             </div>
                           )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"

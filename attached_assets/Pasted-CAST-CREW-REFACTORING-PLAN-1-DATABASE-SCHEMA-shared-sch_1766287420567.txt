@@ -1,0 +1,121 @@
+CAST & CREW REFACTORING PLAN
+1. DATABASE SCHEMA (shared/schema.ts)
+Current Issue: Structure is fine, but might have some redundancy
+What to Fix:
+
+No changes needed to core schema
+crewMaster table is the talent database (actors, producers, etc.)
+cast table links project roles to talents via crewMasterId
+2. CAST TAB - INPUT FORM UX
+Current Issues:
+
+Can only assign talent when creating (not editing)
+No way to edit existing cast entries
+Form lacks clarity for character vs. crew role distinction
+What to Fix:
+
+AddCastDialog: Keep as-is for creation
+Add EditCastDialog: New dialog for editing cast entries with:
+Role Type selector (character/crew)
+Character Name field (shown only when roleType = "character")
+Crew Position field (shown only when roleType = "crew")
+Talent Assignment dropdown (filter by type if needed)
+Notes field
+Add Edit Button: In cast table, add pencil icon to open edit dialog
+Cast Table Column: Show if cast is assigned/unassigned with visual indicator
+Implementation:
+
+Create EditCastDialog component in contacts-view.tsx
+Add useUpdateCast() mutation (already exists in hooks)
+Add Edit button to table rows
+Update AddCastDialog to validate required fields based on roleType
+3. CREW MASTER TAB - MANAGEMENT
+Current Issues:
+
+Crew Master is read-only in UI (shows dialog with table only)
+No way to create, edit, or delete crew master entries directly
+What to Fix:
+
+Replace read-only display with full CRUD interface:
+Add/Create button
+Edit inline or via dialog
+Delete button with confirmation
+Search/filter functionality
+Create CrewMasterDialog component with:
+Embedded table of crew master entries
+Create button → AddCrewMasterDialog
+Edit button on each row → EditCrewMasterDialog
+Delete button with confirmation
+Fields: Name, Title, Department, Email, Phone, Notes
+Implementation:
+
+Create AddCrewMasterDialog component
+Create EditCrewMasterDialog component
+Update CrewMasterDialog to show full CRUD table (not read-only)
+Use existing hooks: useCreateCrewMaster(), useUpdateCrewMaster(), useDeleteCrewMaster()
+4. AI PROMPT ADJUSTMENT (server/replit_integrations/ai/client.ts)
+Current Issue: Prompt generates generic suggestions; needs alignment with new cast structure
+
+What to Fix:
+
+Update AI prompt to generate suggestions in new format:
+Cast suggestions format:
+- roleType: "character"
+- role: "Character name"
+- For actual talent assignment, let users pick from crew master
+Crew suggestions format:
+- Should suggest crew positions (Director, Cinematographer, Producer, etc.)
+- Return as crew master candidates with title and department
+Modify response parsing to match new format:
+Cast: Extract character names, group by type
+Crew: Extract roles with departments
+Implementation:
+
+Update prompt in ai/client.ts to request structured cast/crew
+Update /api/projects/:projectId/auto-suggest endpoint to:
+Create cast entries with appropriate roleType
+Create crewMaster entries for suggested crew positions
+Handle deduplication properly
+5. FORM VALIDATION & UI POLISH
+What to Fix:
+
+Role Type field: Required
+Character Name: Required only when roleType = "character"
+Crew Position: Required only when roleType = "crew"
+Talent Assignment: Optional (can add and assign later)
+Visual feedback: Show assigned talent with avatar in table
+Implementation:
+
+Update insertCastSchema validation rules in shared/schema.ts
+Add conditional validation in form components
+Use existing UI components (Avatar, Badge) for visual representation
+6. HOOKS & SERVER ROUTES
+What Already Exists:
+
+✅ useCast(), useCreateCast(), useUpdateCast(), useDeleteCast()
+✅ useCrewMaster(), useCreateCrewMaster(), useUpdateCrewMaster(), useDeleteCrewMaster()
+✅ Server endpoints for all CRUD operations
+What Might Need Updating:
+
+Server route for creating crew master might need additional validation
+Auto-suggest endpoint needs prompt adjustment (point #4)
+7. OTHER LOGIC THAT NEEDS ADJUSTMENT
+Once you make these changes, you'll need to check/adjust:
+
+Call Sheet Generator (call-sheet-generator.tsx): Verify it correctly pulls cast/crew with assignments
+Crew Management Dialog (crew-management-dialog.tsx): Check if it uses old contacts table or new cast table
+Crew Availability Calendar (crew-availability-calendar.tsx): Verify it works with new crew master structure
+PDF Generator (server/pdf-generator.ts): Make sure it pulls correct cast/crew data
+Budget View - if it references crew/cast, verify it still works
+Contacts View - check if there's old "AddContactDialog" that conflicts with new cast system
+Auto-suggest Response - update frontend to handle new response format with both cast and crew master creation
+IMPLEMENTATION ORDER
+Database: No schema changes needed (optional: clean up redundant tables if desired)
+Backend: Update AI prompt + auto-suggest endpoint
+Frontend:
+Add EditCastDialog
+Create AddCrewMasterDialog & EditCrewMasterDialog
+Update CrewMasterDialog layout
+Add edit/delete buttons to Cast table
+Validation: Update schemas and form validation
+Testing: Verify all CRUD operations work, auto-suggest creates correct format

@@ -1,5 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Crew, CrewAssignment, InsertCrew, InsertCrewAssignment } from "@shared/schema";
+import type { Crew, CrewAssignment, InsertCrew, InsertCrewAssignment, CrewMaster } from "@shared/schema";
+
+export function useCrewMaster() {
+  return useQuery({
+    queryKey: ["crew-master"],
+    queryFn: async () => {
+      const response = await fetch("/api/crew-master", {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch crew master");
+      return response.json() as Promise<CrewMaster[]>;
+    },
+  });
+}
 
 export function useCrew(projectId: number) {
   return useQuery({

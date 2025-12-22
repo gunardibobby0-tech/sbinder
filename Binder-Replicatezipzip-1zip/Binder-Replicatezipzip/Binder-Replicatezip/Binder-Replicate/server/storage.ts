@@ -439,25 +439,39 @@ export class DatabaseStorage implements IStorage {
 
   // Crew Conflict Detection
   async detectCrewConflicts(crewId: number, eventId: number): Promise<{ hasConflict: boolean; conflicts: Array<{ eventId: number; eventTitle: string; startTime: Date; endTime: Date }> }> {
+    console.log(`[CONFLICT CHECK] Checking conflicts for crewId=${crewId}, eventId=${eventId}`);
+    
     const targetEvent = await db.select().from(events).where(eq(events.id, eventId));
     if (!targetEvent.length) {
+      console.log(`[CONFLICT CHECK] Event ${eventId} not found`);
       return { hasConflict: false, conflicts: [] };
     }
 
     const target = targetEvent[0];
+    console.log(`[CONFLICT CHECK] Target event: ${target.title} (${target.startTime} to ${target.endTime})`);
+    
     const assignments = await db.select().from(crewAssignments).where(eq(crewAssignments.crewId, crewId));
+    console.log(`[CONFLICT CHECK] Found ${assignments.length} existing assignments for crewId=${crewId}`);
+    console.log(`[CONFLICT CHECK] Assignments:`, assignments);
+    
     const assignmentEventIds = assignments.map(a => a.eventId).filter(Boolean) as number[];
+    console.log(`[CONFLICT CHECK] Assignment event IDs:`, assignmentEventIds);
     
     if (assignmentEventIds.length === 0) {
+      console.log(`[CONFLICT CHECK] No existing assignments, no conflict`);
       return { hasConflict: false, conflicts: [] };
     }
 
     const assignedEvents = await db.select().from(events).where(inArray(events.id, assignmentEventIds));
+    console.log(`[CONFLICT CHECK] Assigned events:`, assignedEvents);
 
     const conflicts = assignedEvents.filter(evt => {
-      return (target.startTime < evt.endTime) && (target.endTime > evt.startTime);
+      const hasConflict = (target.startTime < evt.endTime) && (target.endTime > evt.startTime);
+      console.log(`[CONFLICT CHECK] Event ${evt.id} ${evt.title}: ${hasConflict ? 'CONFLICT' : 'no conflict'}`);
+      return hasConflict;
     });
 
+    console.log(`[CONFLICT CHECK] Final result: ${conflicts.length} conflicts found`);
     return {
       hasConflict: conflicts.length > 0,
       conflicts: conflicts.map(c => ({

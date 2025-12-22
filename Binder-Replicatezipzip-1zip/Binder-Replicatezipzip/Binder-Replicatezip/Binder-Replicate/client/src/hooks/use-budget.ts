@@ -30,12 +30,12 @@ export function useBudgetLineItems(projectId: number) {
 export function useCreateBudget() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ projectId, totalBudget, contingency }: { projectId: number; totalBudget: string; contingency?: string }) => {
+    mutationFn: async ({ projectId, totalBudget, contingency, currency }: { projectId: number; totalBudget: string; contingency?: string; currency?: string }) => {
       const response = await fetch(`/api/projects/${projectId}/budget`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ totalBudget, contingency }),
+        body: JSON.stringify({ totalBudget, contingency, currency }),
       });
       if (!response.ok) throw new Error("Failed to create budget");
       return response.json();

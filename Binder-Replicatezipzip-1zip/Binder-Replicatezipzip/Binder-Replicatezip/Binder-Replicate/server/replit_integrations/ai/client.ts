@@ -83,29 +83,42 @@ export async function callOpenRouter(
 ): Promise<string> {
   const apiKey = await getApiKey();
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://studiobinder.local',
-      'X-Title': 'StudioBinder',
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.7,
-      max_tokens: 4000,
-    }),
-  });
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://studiobinder.local',
+        'X-Title': 'StudioBinder',
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.7,
+        max_tokens: 1500,
+      }),
+    });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`API error: ${response.status} - ${error}`);
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`OpenRouter API error: ${response.status}`, error);
+      throw new Error(`API error: ${response.status} - ${error}`);
+    }
+
+    const data: OpenRouterResponse = await response.json();
+    console.log('OpenRouter full response:', JSON.stringify(data).substring(0, 500));
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid OpenRouter response structure:', data);
+      throw new Error('Invalid response structure from API');
+    }
+    const content = data.choices[0].message.content;
+    console.log('Extracted content length:', content?.length || 0);
+    return content;
+  } catch (error) {
+    console.error('OpenRouter API call failed:', error);
+    throw error;
   }
-
-  const data: OpenRouterResponse = await response.json();
-  return data.choices[0].message.content;
 }
 
 export async function extractScriptData(
@@ -116,80 +129,87 @@ export async function extractScriptData(
 ): Promise<{
   scriptContent: string;
   cast: Array<{ name: string; role: string; roleType: "character" | "crew" }>;
-  crew: Array<{ name: string; role: string }>;
+  crew: Array<{ name: string; role: string; department?: string }>;
   schedule: Array<{ title: string; description: string; duration: number }>;
 }> {
-  const dateRangeInfo = dateRange ? `\nProduction Date Range: From ${dateRange.startDate} to ${dateRange.endDate}` : '';
-  const daysInfo = daysOfWeek && daysOfWeek.length > 0 ? `\nProduction Days: ${daysOfWeek.join(', ')}` : '';
-  
-  const dateRangeInstruction = dateRange ? '\n5. Schedule all events within the provided date range' : '';
-  const daysInstruction = daysOfWeek && daysOfWeek.length > 0 ? '\n6. Only schedule events on the specified production days (Monday-Sunday)' : '';
-  
-  const prompt = `You are a professional film and TV production expert. Your task is to analyze a screenplay, script, or production document and extract key production data.
+  const prompt = `Analyze this script and extract JSON data. IMPORTANT: Respond with ONLY valid JSON, no markdown formatting, no extra text.
 
-DOCUMENT TO ANALYZE:
-${documentContent}${dateRangeInfo}${daysInfo}
+SCRIPT:
+${documentContent.substring(0, 1500)}
 
-EXTRACTION INSTRUCTIONS:
-1. Extract the main script content (narrative, dialogue, scene descriptions)
-2. Extract CHARACTER CAST ONLY - character names that appear in the script
-3. Suggest CREW POSITIONS as production roles needed (not actual people - these become master data templates)
-4. Extract production schedule events with realistic durations${dateRangeInstruction}${daysInstruction}
-
-EXPECTED JSON RESPONSE FORMAT (MUST BE VALID JSON, NO MARKDOWN):
+RETURN THIS JSON (ONLY):
 {
-  "scriptContent": "The full screenplay or narrative content from the document. Include all dialogue, scene directions, and narrative text. If no script found, use a brief summary of the document.",
-  "cast": [
-    {
-      "name": "Character name ONLY (e.g., 'John', 'Detective Sarah', 'The Villain')",
-      "role": "Brief character description or type (e.g., 'Lead', 'Detective', 'Victim', 'Narrator')"
-    }
-  ],
-  "crew": [
-    {
-      "name": "Job title (e.g., 'Director', 'Cinematographer', 'Sound Mixer', 'Gaffer')",
-      "role": "Key responsibilities (e.g., 'Direct actors and oversee creative vision' or 'Manage camera work and cinematography')"
-    }
-  ],
-  "schedule": [
-    {
-      "title": "Event or shooting day title (e.g., 'Day 1: Interior Scenes', 'Location Scout')",
-      "description": "Brief description of what happens during this schedule item",
-      "duration": 480
-    }
-  ]
+  "scriptContent": "Brief summary of script",
+  "cast": [{"name": "Character name", "role": "Description"}],
+  "crew": [{"name": "Director", "role": "Oversight", "department": "Direction"}, {"name": "Cinematographer", "role": "Camera", "department": "Camera"}],
+  "schedule": [{"title": "Day 1", "description": "Shoot", "duration": 480}]
 }
 
-IMPORTANT RULES:
-- Return ONLY the JSON object, no additional text, markdown, or explanations
-- CAST = Character names from script (what to film), will be created as cast entries with roleType "character"
-- CREW = Job positions needed (Director, DP, etc.), will be stored as crew master templates for talent assignment
-- crew field should contain 3-8 essential crew positions based on the production needs (never empty)
-- All other fields are required. If information is not found, use appropriate defaults:
-  - scriptContent: empty string ""
-  - cast: array of character names extracted from script
-  - crew: array of 3-8 suggested crew positions (never empty if production type is clear)
-  - schedule: empty array [] if no schedule found
-- For cast, use ONLY character names from the script, not actor names
-- For crew, use actual job titles (Director, Cinematographer, Sound Mixer, Gaffer, etc.)
-- Duration should be in minutes (480 = 8 hours for a typical shooting day)
-- Ensure the JSON is valid and properly formatted
-- Extract as much detail as possible from the provided document`;
-
-  const response = await callOpenRouter([
-    {
-      role: 'user',
-      content: prompt,
-    },
-  ], model);
+RULES:
+- Extract character names from script to cast array
+- Suggest 5-8 crew positions (Director, DP, Sound, Gaffer, etc.)
+- Return ONLY the JSON object, no markdown, no code blocks
+- If JSON is incomplete, close all brackets properly
+- duration = minutes (480 = 8 hour day)`;
 
   try {
-    // Extract JSON from response (handle potential markdown formatting)
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in response');
+    const response = await callOpenRouter([
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ], model);
+
+    // Log response for debugging
+    console.log('API Response length:', response?.length || 0);
+    console.log('API Response preview:', response?.substring(0, 200) || 'empty');
+
+    // Extract JSON from response (handle potential markdown formatting and truncation)
+    let jsonStr = response?.trim() || '';
+    
+    // Remove markdown code blocks if present
+    jsonStr = jsonStr.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+    jsonStr = jsonStr.replace(/^```\n?/, '').replace(/\n?```$/, '');
+    
+    // Try to find complete JSON object
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (!jsonMatch || !jsonMatch[0]) {
+      console.error('No JSON found in response. Full response:', jsonStr?.substring(0, 500) || 'empty');
+      throw new Error(`No JSON found in response (length: ${response?.length || 0})`);
     }
-    const parsed = JSON.parse(jsonMatch[0]);
+
+    let jsonToparse = jsonMatch[0];
+    
+    // Handle incomplete JSON (truncated response) by closing brackets
+    try {
+      JSON.parse(jsonToparse);
+    } catch (e: any) {
+      // If JSON is incomplete, try to fix by closing brackets
+      if (e.message.includes('Unexpected end of JSON')) {
+        console.log('Attempting to fix incomplete JSON...');
+        // Close any unclosed arrays/objects
+        let bracketCount = 0;
+        let braceCount = 0;
+        for (let i = 0; i < jsonToparse.length; i++) {
+          if (jsonToparse[i] === '[') bracketCount++;
+          if (jsonToparse[i] === ']') bracketCount--;
+          if (jsonToparse[i] === '{') braceCount++;
+          if (jsonToparse[i] === '}') braceCount--;
+        }
+        while (bracketCount > 0) { jsonToparse += ']'; bracketCount--; }
+        while (braceCount > 0) { jsonToparse += '}'; braceCount--; }
+        console.log('Fixed JSON length:', jsonToparse.length);
+      }
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonToparse);
+    } catch (parseError) {
+      console.error('Failed to parse JSON:', parseError);
+      console.error('JSON string:', jsonToparse?.substring(0, 500));
+      throw new Error('Failed to parse JSON response from API');
+    }
     
     // Validate structure
     if (!parsed.scriptContent) parsed.scriptContent = '';
@@ -199,7 +219,15 @@ IMPORTANT RULES:
     
     return parsed;
   } catch (error) {
-    console.error('Failed to parse OpenRouter response:', response);
+    console.error('Failed to extract script data:', error);
+    if (error instanceof Error) {
+      if (error.message.includes('API error')) {
+        throw new Error('API service is currently unavailable. Please ensure your OpenRouter API key is valid and has credits.');
+      }
+      if (error.message.includes('API key not configured')) {
+        throw new Error('OpenRouter API key is not set. Please configure it in your project settings.');
+      }
+    }
     throw new Error('Failed to extract data from document. Please check the document format and try again.');
   }
 }

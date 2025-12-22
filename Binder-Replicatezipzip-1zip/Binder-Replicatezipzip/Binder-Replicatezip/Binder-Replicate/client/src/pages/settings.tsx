@@ -14,10 +14,12 @@ export default function Settings() {
   const { toast } = useToast();
   const [apiKey, setApiKey] = useState("");
   const [model, setModel] = useState("gpt-3.5-turbo");
+  const [currency, setCurrency] = useState<"IDR" | "USD">("IDR");
 
   useEffect(() => {
     if (settings) {
       setModel(settings.preferredModel || "gpt-3.5-turbo");
+      setCurrency((settings.currency as "IDR" | "USD") || "IDR");
     }
   }, [settings]);
 
@@ -25,6 +27,7 @@ export default function Settings() {
     updateSettings({
       openaiKey: apiKey || undefined,
       preferredModel: model,
+      currency: currency,
     }, {
       onSuccess: () => {
         setApiKey("");
@@ -109,11 +112,36 @@ export default function Settings() {
             </div>
           </div>
 
+          {/* Currency Selection */}
+          <div className="space-y-4 border-t border-white/5 pt-6">
+            <div>
+              <Label htmlFor="currency" className="text-base font-semibold text-white mb-2 block">
+                Budget Currency
+              </Label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Set the default currency used for budgeting across your projects.
+              </p>
+              <Select value={currency} onValueChange={(value) => setCurrency(value as "IDR" | "USD")}>
+                <SelectTrigger className="bg-black/20 border-white/10 h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1c2128] border-white/10">
+                  <SelectItem value="IDR" className="text-white hover:bg-white/10">
+                    IDR (Indonesian Rupiah)
+                  </SelectItem>
+                  <SelectItem value="USD" className="text-white hover:bg-white/10">
+                    USD (US Dollar)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Save Button */}
           <div className="border-t border-white/5 pt-6 flex justify-end gap-3">
             <Button
               onClick={handleSave}
-              disabled={isUpdating || (!apiKey && model === settings?.preferredModel)}
+              disabled={isUpdating || (!apiKey && model === settings?.preferredModel && currency === (settings?.currency as string))}
               className="gap-2"
             >
               {isUpdating ? (

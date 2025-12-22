@@ -1,19 +1,20 @@
 import { useEvents } from "@/hooks/use-events";
 import { Card } from "@/components/ui/card";
-import { Loader2, Calendar, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Calendar, Clock, TrendingUp, MapPin } from "lucide-react";
 import { format, differenceInMinutes, startOfDay, endOfDay, parseISO } from "date-fns";
 import { useMemo } from "react";
 
 const EVENT_COLORS = {
-  Shoot: "bg-red-500/30 border-red-500/60 text-red-400",
-  Meeting: "bg-blue-500/30 border-blue-500/60 text-blue-400",
-  Scout: "bg-green-500/30 border-green-500/60 text-green-400",
+  Shoot: "bg-red-500/40 border-red-500/70 text-red-300 shadow-lg shadow-red-500/20",
+  Meeting: "bg-blue-500/40 border-blue-500/70 text-blue-300 shadow-lg shadow-blue-500/20",
+  Scout: "bg-green-500/40 border-green-500/70 text-green-300 shadow-lg shadow-green-500/20",
 };
 
 const EVENT_TYPE_COLORS = {
-  Shoot: "bg-red-500/20 text-red-400 border-red-500/20",
-  Meeting: "bg-blue-500/20 text-blue-400 border-blue-500/20",
-  Scout: "bg-green-500/20 text-green-400 border-green-500/20",
+  Shoot: "bg-red-500/30 text-red-300 border-red-500/50 shadow-sm",
+  Meeting: "bg-blue-500/30 text-blue-300 border-blue-500/50 shadow-sm",
+  Scout: "bg-green-500/30 text-green-300 border-green-500/50 shadow-sm",
 };
 
 interface GroupedEvent {
@@ -77,6 +78,18 @@ export default function TimelineView({ projectId }: { projectId: number }) {
       })) as GroupedEvent[];
   }, [events]);
 
+  const stats = useMemo(() => {
+    const totalEvents = groupedEvents.reduce((sum, day) => sum + day.events.length, 0);
+    const totalMinutes = groupedEvents.reduce((sum, day) => 
+      sum + day.events.reduce((daySum, event) => daySum + event.durationMinutes, 0), 0
+    );
+    const dateRange = groupedEvents.length > 0 ? {
+      start: groupedEvents[0].date,
+      end: groupedEvents[groupedEvents.length - 1].date,
+    } : null;
+    return { totalEvents, totalMinutes, dateRange };
+  }, [groupedEvents]);
+
   if (isLoading) {
     return (
       <div className="p-12 text-center">
@@ -101,9 +114,39 @@ export default function TimelineView({ projectId }: { projectId: number }) {
 
   return (
     <div className="p-6 lg:p-10 space-y-8 max-w-7xl mx-auto">
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-1">Production Timeline</h2>
-        <p className="text-muted-foreground">Visual timeline of all scheduled events across your production</p>
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-3xl font-bold text-white mb-2">Production Timeline</h2>
+          <p className="text-muted-foreground">Visual timeline of all scheduled events across your production</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-black/30 border border-white/10 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="w-4 h-4 text-blue-400" />
+              <span className="text-sm text-muted-foreground font-medium">Total Events</span>
+            </div>
+            <p className="text-2xl font-bold text-white">{stats.totalEvents}</p>
+          </div>
+          
+          <div className="bg-black/30 border border-white/10 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4 text-green-400" />
+              <span className="text-sm text-muted-foreground font-medium">Total Duration</span>
+            </div>
+            <p className="text-2xl font-bold text-white">
+              {Math.floor(stats.totalMinutes / 60)}h {stats.totalMinutes % 60}m
+            </p>
+          </div>
+          
+          <div className="bg-black/30 border border-white/10 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-4 h-4 text-purple-400" />
+              <span className="text-sm text-muted-foreground font-medium">Production Days</span>
+            </div>
+            <p className="text-2xl font-bold text-white">{groupedEvents.length}</p>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -214,7 +257,7 @@ export default function TimelineView({ projectId }: { projectId: number }) {
                         </div>
 
                         {/* Event Details */}
-                        <div className="flex items-center gap-4 px-3 text-xs">
+                        <div className="flex items-center gap-4 px-3 text-xs flex-wrap">
                           <span className={`px-2 py-0.5 rounded border font-medium ${
                             EVENT_TYPE_COLORS[event.type as keyof typeof EVENT_TYPE_COLORS] || EVENT_TYPE_COLORS.Meeting
                           }`}>
@@ -226,6 +269,17 @@ export default function TimelineView({ projectId }: { projectId: number }) {
                               {format(startTime, "HH:mm")} - {format(endTime, "HH:mm")}
                             </span>
                           </div>
+                          {event.offsetPercent && event.offsetPercent > 0 && event.latitude && event.longitude && (
+                            <a
+                              href={`https://www.google.com/maps?q=${event.latitude},${event.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-auto flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
+                            >
+                              <MapPin className="w-3 h-3" />
+                              <span>View Map</span>
+                            </a>
+                          )}
                         </div>
                       </div>
                     );
