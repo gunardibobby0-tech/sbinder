@@ -14,7 +14,7 @@ import BudgetChart from "@/components/budget-chart";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Plus, Trash2, DollarSign, PieChart, CalculateIcon } from "lucide-react";
+import { Loader2, Plus, Trash2, DollarSign, PieChart, Calculator } from "lucide-react";
 import { useState, useEffect } from "react";
 import { differenceInMinutes } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -303,15 +303,26 @@ export default function BudgetView({ projectId }: { projectId: number }) {
 
       {/* Line Items */}
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-2">
           <h3 className="text-lg font-semibold text-white">Budget Line Items</h3>
-          <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="bg-primary hover:bg-primary/90">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Line Item
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              onClick={handleCalculateBudget}
+              disabled={isCalculating}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isCalculating && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              {!isCalculating && <Calculator className="w-4 h-4 mr-2" />}
+              Calculate Budget
+            </Button>
+            <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="bg-primary hover:bg-primary/90">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Line Item
+                </Button>
+              </DialogTrigger>
             <DialogContent className="bg-[#1c2128] border-white/10 text-white">
               <DialogHeader>
                 <DialogTitle>Add Budget Line Item</DialogTitle>
@@ -395,7 +406,8 @@ export default function BudgetView({ projectId }: { projectId: number }) {
                 </form>
               </Form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         {lineItems.length === 0 ? (
