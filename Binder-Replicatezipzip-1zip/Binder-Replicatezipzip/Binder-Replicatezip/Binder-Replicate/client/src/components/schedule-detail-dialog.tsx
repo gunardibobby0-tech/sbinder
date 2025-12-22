@@ -8,7 +8,7 @@ import { format, differenceInMinutes } from "date-fns";
 import type { Event, Crew, CrewAssignment } from "@shared/schema";
 import { Clock, MapPin, Users, Plus, Trash2, Briefcase, AlertCircle } from "lucide-react";
 import { useState } from "react";
-import { useCrew, useCrewMaster, useCrewAssignments, useCreateCrewAssignment, useDeleteCrewAssignment, useCheckCrewConflicts } from "@/hooks/use-crew";
+import { useCrew, useCrewMaster, useCrewAssignments, useCreateCrew, useCreateCrewAssignment, useDeleteCrewAssignment, useCheckCrewConflicts } from "@/hooks/use-crew";
 import { useUpdateEvent } from "@/hooks/use-events";
 import { useEvents } from "@/hooks/use-events";
 import { useCreateBudgetLineItem } from "@/hooks/use-budget";
@@ -37,6 +37,7 @@ export function ScheduleDetailDialog({
   const { data: crew = [], isLoading: crewLoading } = useCrewMaster();
   const { data: assignments = [], isLoading: assignmentsLoading } = useCrewAssignments(projectId || 0);
   const { data: allEvents = [] } = useEvents(projectId || 0);
+  const { mutate: createProjectCrew } = useCreateCrew();
   const { mutate: assignCrew, isPending: isAssigning } = useCreateCrewAssignment();
   const { mutate: deleteCrew, isPending: isDeleting } = useDeleteCrewAssignment();
   const { mutate: checkConflicts } = useCheckCrewConflicts();
@@ -287,46 +288,65 @@ export function ScheduleDetailDialog({
                           <button
                             onClick={() => {
                               if (!isAssigned && crewMember.id && event.id && projectId) {
-                                checkConflicts(
-                                  { projectId, crewId: crewMember.id, eventId: event.id },
+                                // First, auto-add crew member to project if not already there
+                                createProjectCrew(
                                   {
-                                    onSuccess: (result) => {
-                                      setConflictWarnings(prev => ({
-                                        ...prev,
-                                        [crewMember.id!]: result.conflicts
-                                      }));
-                                      if (!result.hasConflict) {
-                                        assignCrew(
-                                          { projectId, data: { eventId: event.id, crewId: crewMember.id! } },
-                                          {
-                                            onSuccess: () => {
-                                              // Auto-create budget line item
-                                              const estimatedCost = calculateCrewCost(crewMember);
-                                              if (estimatedCost && projectId) {
-                                                createBudgetItem(
-                                                  {
-                                                    projectId,
-                                                    data: {
-                                                      projectId,
-                                                      category: "Crew",
-                                                      description: `${crewMember.name} - ${crewMember.title}`,
-                                                      amount: estimatedCost.toString(),
-                                                      status: "estimated",
-                                                    },
+                                    projectId,
+                                    data: {
+                                      name: crewMember.name,
+                                      title: crewMember.title,
+                                      department: (crewMember.department || "") as string,
+                                      notes: crewMember.notes || "",
+                                      contact: (crewMember.email || crewMember.phone || "") as string,
+                                      pricing: "",
+                                    } as any,
+                                  },
+                                  {
+                                    onSuccess: (newCrew) => {
+                                      // Now check for conflicts with the new crew entry
+                                      checkConflicts(
+                                        { projectId, crewId: newCrew.id, eventId: event.id },
+                                        {
+                                          onSuccess: (result) => {
+                                            setConflictWarnings(prev => ({
+                                              ...prev,
+                                              [crewMember.id!]: result.conflicts
+                                            }));
+                                            if (!result.hasConflict) {
+                                              assignCrew(
+                                                { projectId, data: { eventId: event.id, crewId: newCrew.id } as any },
+                                              {
+                                                onSuccess: () => {
+                                                  // Auto-create budget line item
+                                                  const estimatedCost = calculateCrewCost(crewMember as any);
+                                                  if (estimatedCost && projectId) {
+                                                    createBudgetItem(
+                                                      {
+                                                        projectId,
+                                                        data: {
+                                                          projectId,
+                                                          category: "Crew",
+                                                          description: `${crewMember.name} - ${crewMember.title}`,
+                                                          amount: estimatedCost.toString(),
+                                                          status: "estimated",
+                                                        },
+                                                      }
+                                                    );
                                                   }
-                                                );
+                                                  queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
+                                                  setConflictWarnings(prev => {
+                                                    const updated = { ...prev };
+                                                    delete updated[crewMember.id!];
+                                                    return updated;
+                                                  });
+                                                  setAssigningCrew(false);
+                                                },
                                               }
-                                              queryClient.invalidateQueries({ queryKey: ["crew-assignments", projectId] });
-                                              setConflictWarnings(prev => {
-                                                const updated = { ...prev };
-                                                delete updated[crewMember.id!];
-                                                return updated;
-                                              });
-                                              setAssigningCrew(false);
-                                            },
-                                          }
-                                        );
-                                      }
+                                            );
+                                            }
+                                          },
+                                        }
+                                      );
                                     },
                                   }
                                 );
