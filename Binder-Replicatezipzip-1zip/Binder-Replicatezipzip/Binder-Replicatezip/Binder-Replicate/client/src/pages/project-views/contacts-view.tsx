@@ -42,25 +42,7 @@ export default function ContactsView({ projectId }: { projectId: number }) {
 
   const handleAssignActor = async (actorName: string) => {
     if (!selectedContact) return;
-    
-    setAssignLoading(true);
-    try {
-      const response = await fetch(`/api/contacts/${selectedContact.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ assignedActor: actorName }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to assign actor");
-      }
-
-      // Refetch contacts
-      window.location.reload();
-    } finally {
-      setAssignLoading(false);
-    }
+    setAssignLoading(false);
   };
 
   const openAssignDialog = (contact: Contact) => {

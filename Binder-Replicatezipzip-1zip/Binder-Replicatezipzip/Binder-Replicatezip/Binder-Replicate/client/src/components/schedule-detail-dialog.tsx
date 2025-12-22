@@ -294,6 +294,7 @@ export function ScheduleDetailDialog({
                                   {
                                     projectId,
                                     data: {
+                                      projectId,
                                       name: crewMember.name || "Unknown",
                                       title: crewMember.title || crewMember.name || "Crew Member",
                                       department: crewMember.department || "General",
