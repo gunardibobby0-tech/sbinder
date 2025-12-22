@@ -232,7 +232,7 @@ export function ScheduleDetailDialog({
                 variant="outline"
                 onClick={() => setAssigningCrew(true)}
                 className="border-primary/50 hover:border-primary text-primary hover:text-primary"
-                disabled={crew.length === 0 || isEditing}
+                disabled={crew.length === 0}
               >
                 <Plus className="w-3 h-3 mr-1" />
                 Add Crew
