@@ -1,4 +1,8 @@
 import { useBudget, useBudgetLineItems, useCreateBudget, useCreateBudgetLineItem, useDeleteBudgetLineItem } from "@/hooks/use-budget";
+import { useCrewAssignments } from "@/hooks/use-crew";
+import { useCast } from "@/hooks/use-cast";
+import { useCrewMaster } from "@/hooks/use-crew-master";
+import { useEvents } from "@/hooks/use-events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -10,8 +14,10 @@ import BudgetChart from "@/components/budget-chart";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Plus, Trash2, DollarSign, PieChart } from "lucide-react";
+import { Loader2, Plus, Trash2, DollarSign, PieChart, CalculateIcon } from "lucide-react";
 import { useState, useEffect } from "react";
+import { differenceInMinutes } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 const budgetLineItemSchema = z.object({
   category: z.string().min(1),
@@ -40,12 +46,18 @@ const CATEGORIES = [
 export default function BudgetView({ projectId }: { projectId: number }) {
   const { data: budget, isLoading: budgetLoading } = useBudget(projectId);
   const { data: lineItems = [], isLoading: itemsLoading } = useBudgetLineItems(projectId);
+  const { data: crewAssignments = [] } = useCrewAssignments(projectId);
+  const { data: castData = [] } = useCast(projectId);
+  const { data: crewMaster = [] } = useCrewMaster();
+  const { data: events = [] } = useEvents(projectId);
   const { mutate: createBudget, isPending: creatingBudget } = useCreateBudget();
   const { mutate: createLineItem, isPending: creatingItem } = useCreateBudgetLineItem();
   const { mutate: deleteLineItem, isPending: deletingItem } = useDeleteBudgetLineItem();
+  const { toast } = useToast();
 
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
   const [itemDialogOpen, setItemDialogOpen] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   // Only auto-open budget dialog on first load if no budget exists
   useEffect(() => {
@@ -53,6 +65,93 @@ export default function BudgetView({ projectId }: { projectId: number }) {
       setBudgetDialogOpen(true);
     }
   }, [budget, budgetLoading]);
+
+  const handleCalculateBudget = async () => {
+    setIsCalculating(true);
+    try {
+      let addedCount = 0;
+
+      // Process crew assignments
+      for (const assignment of crewAssignments) {
+        const event = events.find(e => e.id === assignment.eventId);
+        const crewMem = crewMaster.find(c => c.id === assignment.crewId);
+
+        if (event && crewMem && crewMem.costAmount && crewMem.paymentType) {
+          const duration = differenceInMinutes(new Date(event.endTime), new Date(event.startTime));
+          const hours = duration / 60;
+          const days = Math.ceil(duration / (8 * 60)); // 8-hour work day
+
+          let amount = 0;
+          let description = `Crew: ${crewMem.name} - ${crewMem.title}`;
+
+          if (crewMem.paymentType === "hourly") {
+            amount = Math.ceil(hours * parseFloat(crewMem.costAmount));
+            description += ` (${hours.toFixed(1)} hours)`;
+          } else if (crewMem.paymentType === "daily") {
+            amount = days * parseFloat(crewMem.costAmount);
+            description += ` (${days} day${days > 1 ? 's' : ''})`;
+          } else if (crewMem.paymentType === "fixed") {
+            amount = parseFloat(crewMem.costAmount);
+          }
+
+          if (amount > 0) {
+            // Check if budget line already exists to avoid duplicates
+            const exists = lineItems.some(
+              item => item.description === description && item.category === "Crew"
+            );
+
+            if (!exists) {
+              await new Promise((resolve) => {
+                createLineItem(
+                  { projectId, data: { category: "Crew", description, amount: amount.toString(), status: "estimated", projectId } as any },
+                  { onSuccess: resolve } as any
+                );
+              });
+              addedCount++;
+            }
+          }
+        }
+      }
+
+      // Process cast assignments with fixed compensation
+      for (const cast of castData) {
+        if (cast.crewMasterId) {
+          const talent = crewMaster.find(c => c.id === cast.crewMasterId);
+          if (talent && talent.costAmount && talent.paymentType === "fixed") {
+            const description = `Cast: ${talent.name} - ${cast.role}`;
+
+            // Check if budget line already exists
+            const exists = lineItems.some(
+              item => item.description === description && item.category === "Cast"
+            );
+
+            if (!exists) {
+              await new Promise((resolve) => {
+                createLineItem(
+                  { projectId, data: { category: "Cast", description, amount: parseFloat(talent.costAmount).toString(), status: "estimated", projectId } as any },
+                  { onSuccess: resolve } as any
+                );
+              });
+              addedCount++;
+            }
+          }
+        }
+      }
+
+      toast({
+        title: "Budget Calculated",
+        description: `Added ${addedCount} budget line item${addedCount !== 1 ? 's' : ''}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to calculate budget",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCalculating(false);
+    }
+  };
 
   const budgetForm = useForm({
     resolver: zodResolver(z.object({ totalBudget: z.string().min(1) })),
