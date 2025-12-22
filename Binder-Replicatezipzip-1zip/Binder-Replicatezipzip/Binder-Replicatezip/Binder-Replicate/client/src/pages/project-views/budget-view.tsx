@@ -11,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Plus, Trash2, DollarSign, PieChart } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const budgetLineItemSchema = z.object({
   category: z.string().min(1),
@@ -44,8 +44,15 @@ export default function BudgetView({ projectId }: { projectId: number }) {
   const { mutate: createLineItem, isPending: creatingItem } = useCreateBudgetLineItem();
   const { mutate: deleteLineItem, isPending: deletingItem } = useDeleteBudgetLineItem();
 
-  const [budgetDialogOpen, setBudgetDialogOpen] = useState(!budget);
+  const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
   const [itemDialogOpen, setItemDialogOpen] = useState(false);
+
+  // Only auto-open budget dialog on first load if no budget exists
+  useEffect(() => {
+    if (!budgetLoading && !budget) {
+      setBudgetDialogOpen(true);
+    }
+  }, [budget, budgetLoading]);
 
   const budgetForm = useForm({
     resolver: zodResolver(z.object({ totalBudget: z.string().min(1) })),
