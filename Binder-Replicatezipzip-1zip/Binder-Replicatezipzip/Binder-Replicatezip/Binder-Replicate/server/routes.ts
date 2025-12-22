@@ -586,7 +586,9 @@ export async function registerRoutes(
       res.status(201).json(assignment);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
+        const fieldError = `${err.errors[0].path.join('.')} ${err.errors[0].message}`;
+        console.error("Crew assignment validation error:", fieldError, "Body:", JSON.stringify(req.body));
+        return res.status(400).json({ message: fieldError });
       }
       throw err;
     }

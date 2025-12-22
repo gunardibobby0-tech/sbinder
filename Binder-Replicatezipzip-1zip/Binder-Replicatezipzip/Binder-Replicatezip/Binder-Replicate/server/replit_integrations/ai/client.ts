@@ -24,6 +24,14 @@ export interface OpenRouterModel {
 let cachedApiKey: string | null = null;
 let cachedModels: Array<{ id: string; name: string }> | null = null;
 
+// Helper function to determine if a model is premium/paid
+function isPremiumModel(modelId: string): boolean {
+  const premiumModelPatterns = [
+    'gpt-4', 'gpt-4o', 'claude-3', 'claude-opus', 'gemini-2', 'mistral-large'
+  ];
+  return premiumModelPatterns.some(pattern => modelId.toLowerCase().includes(pattern));
+}
+
 async function getApiKey(): Promise<string> {
   if (cachedApiKey) return cachedApiKey;
 
@@ -132,7 +140,9 @@ export async function extractScriptData(
   crew: Array<{ name: string; role: string; department?: string }>;
   schedule: Array<{ title: string; description: string; duration: number }>;
 }> {
-  const prompt = `Analyze this script and extract JSON data. IMPORTANT: Respond with ONLY valid JSON, no markdown formatting, no extra text.
+  const isFreeTier = !isPremiumModel(model);
+  
+  const freePrompt = `Analyze this script and extract JSON data. IMPORTANT: Respond with ONLY valid JSON, no markdown formatting, no extra text.
 
 SCRIPT:
 ${documentContent.substring(0, 1500)}
@@ -151,6 +161,47 @@ RULES:
 - Return ONLY the JSON object, no markdown, no code blocks
 - If JSON is incomplete, close all brackets properly
 - duration = minutes (480 = 8 hour day)`;
+
+  const premiumPrompt = `You are an expert film production manager and script analyst. Analyze the script below and extract a comprehensive JSON data structure for production planning.
+
+SCRIPT CONTENT:
+${documentContent.substring(0, 2000)}
+
+${dateRange ? `PRODUCTION SCHEDULE: ${dateRange.startDate} to ${dateRange.endDate}` : ''}
+${daysOfWeek && daysOfWeek.length > 0 ? `PRODUCTION DAYS: ${daysOfWeek.join(', ')}` : ''}
+
+Return ONLY valid JSON (no markdown, no code blocks, no explanations):
+{
+  "scriptContent": "2-3 sentence script summary including genre, tone, and main premise",
+  "cast": [
+    {"name": "Character name", "role": "Brief character description and arc"},
+    {"name": "Another character", "role": "Their role in the story"}
+  ],
+  "crew": [
+    {"name": "Director", "role": "Vision and creative direction of the production", "department": "Direction"},
+    {"name": "Director of Photography", "role": "Camera work and visual aesthetics", "department": "Camera"},
+    {"name": "Production Designer", "role": "Sets, locations, and visual world", "department": "Art"},
+    {"name": "Costume Designer", "role": "Character costumes and wardrobe", "department": "Costume"},
+    {"name": "Sound Designer", "role": "Audio design and sound effects", "department": "Sound"},
+    {"name": "Gaffer", "role": "Lighting setup and electrical", "department": "Lighting"},
+    {"name": "1st Assistant Director", "role": "Crew coordination and schedule management", "department": "Production"},
+    {"name": "Line Producer", "role": "Budget oversight and resource allocation", "department": "Production"}
+  ],
+  "schedule": [
+    {"title": "Shoot Day 1", "description": "Primary location setup, character introductions", "duration": 480},
+    {"title": "Shoot Day 2", "description": "Main action sequences and climactic scenes", "duration": 480}
+  ]
+}
+
+EXTRACTION GUIDELINES:
+- Extract ALL named characters and their key roles in the story
+- Suggest 7-10 essential crew positions based on production scale and requirements
+- Create 3-5 shooting days, each 8 hours (480 min), with specific scene descriptions
+- For crew: include realistic department assignments based on script requirements
+- Ensure all JSON is properly closed with matching brackets
+- Return ONLY the JSON object, nothing else`;
+
+  const prompt = isFreeTier ? freePrompt : premiumPrompt;
 
   try {
     const response = await callOpenRouter([
@@ -237,13 +288,36 @@ export async function generateScript(
   model: string = 'meta-llama/llama-3.3-70b-instruct',
   language: 'en' | 'id' = 'id'
 ): Promise<string> {
+  const isFreeTier = !isPremiumModel(model);
   const langInstruction = language === 'id' 
     ? 'Buat naskah dalam bahasa Indonesia.' 
     : 'Create the script in English.';
 
-  const systemPrompt = `You are a professional screenwriter and scriptwriter with extensive experience in film and television. 
+  let systemPrompt: string;
+  
+  if (isFreeTier) {
+    systemPrompt = `You are a professional screenwriter and scriptwriter with extensive experience in film and television. 
 Create high-quality, production-ready scripts with proper formatting, engaging dialogue, and clear scene descriptions. 
 ${langInstruction}`;
+  } else {
+    systemPrompt = `You are an award-winning screenwriter and script consultant with extensive credits in film, television, and streaming productions. 
+
+Your expertise includes:
+- Crafting compelling narratives with strong character arcs
+- Writing production-ready scripts with proper industry formatting
+- Creating authentic dialogue that reveals character and advances plot
+- Structuring scenes for cinematic impact and practical filmmaking
+- Adapting stories across genres while maintaining emotional resonance
+
+Deliver scripts that are:
+- Technically formatted to industry standards (proper scene headings, action lines, dialogue, parentheticals)
+- Rich with visual storytelling and cinematic description
+- Featuring nuanced, memorable dialogue
+- Production-friendly with clear technical and logistical requirements
+- Appropriate to budget scope while maximizing creative impact
+
+${langInstruction}`;
+  }
 
   const response = await callOpenRouter([
     {

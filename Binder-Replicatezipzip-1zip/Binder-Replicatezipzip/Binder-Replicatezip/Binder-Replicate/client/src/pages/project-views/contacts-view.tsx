@@ -23,9 +23,10 @@ export default function ContactsView({ projectId }: { projectId: number }) {
   const { data: contacts, isLoading: contactsLoading } = useContacts(projectId);
   const deleteContact = useDeleteContact();
   const deleteCast = useDeleteCast();
+  const updateCast = useUpdateCast();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [selectedCast, setSelectedCast] = useState<Cast | null>(null);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [assignLoading, setAssignLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"cast" | "crew">("cast");
@@ -41,15 +42,39 @@ export default function ContactsView({ projectId }: { projectId: number }) {
   );
 
   const handleAssignActor = async (actorName: string) => {
-    if (!selectedContact) return;
-    setAssignLoading(false);
+    if (!selectedCast) return;
+    
+    try {
+      setAssignLoading(true);
+      
+      // Find the crewMasterId for the actor name
+      const actor = crewMasterData?.find(
+        crew => crew.name.toLowerCase() === actorName.trim().toLowerCase()
+      );
+      
+      if (!actor) {
+        throw new Error(`Actor "${actorName}" not found in crew master database. Please add them first.`);
+      }
+      
+      // Update the cast record with the crewMasterId
+      await updateCast.mutateAsync({
+        projectId,
+        castId: selectedCast.id,
+        data: { crewMasterId: actor.id }
+      });
+      
+      setSelectedCast(null);
+      setAssignDialogOpen(false);
+    } catch (error) {
+      throw error;
+    } finally {
+      setAssignLoading(false);
+    }
   };
 
-  const openAssignDialog = (contact: Contact) => {
-    if (contact.category === "Cast") {
-      setSelectedContact(contact);
-      setAssignDialogOpen(true);
-    }
+  const openAssignDialog = (castItem: Cast) => {
+    setSelectedCast(castItem);
+    setAssignDialogOpen(true);
   };
 
   if (castLoading || crewMasterLoading) return <div className="p-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>;
@@ -152,6 +177,15 @@ export default function ContactsView({ projectId }: { projectId: number }) {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="text-muted-foreground hover:text-green-400 hover:bg-green-500/10"
+                          title="Assign talent"
+                          onClick={() => openAssignDialog(item)}
+                        >
+                          <UserCheck className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10"
                           onClick={() => setEditingCast(item)}
                         >
@@ -193,6 +227,15 @@ export default function ContactsView({ projectId }: { projectId: number }) {
           onClose={() => setEditingCast(null)}
         />
       )}
+
+      {/* Assign Actor Dialog */}
+      <AssignActorDialog
+        contact={selectedCast}
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        onAssign={handleAssignActor}
+        isLoading={assignLoading}
+      />
     </div>
   );
 }
