@@ -213,7 +213,11 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
               </div>
             ) : (
               events?.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()).map((event) => {
-                const eventCrewCount = assignments.filter(a => a.eventId === event.id).length;
+                const eventAssignments = assignments.filter(a => a.eventId === event.id);
+                const eventCrewCount = eventAssignments.length;
+                const eventCrew = eventAssignments
+                  .map(assignment => crew?.find(c => c.id === assignment.crewId))
+                  .filter(Boolean) as typeof crew;
                 return (
                   <Card 
                     key={event.id} 
@@ -276,7 +280,7 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
 
                     {/* Action Buttons */}
                     <div className="px-6 py-3 border-t border-white/5 bg-black/30 flex gap-2 justify-end">
-                      <CallSheetGenerator projectId={projectId} event={event} crew={crew} />
+                      <CallSheetGenerator projectId={projectId} event={event} crew={eventCrew} />
                       <Button 
                         variant="outline" 
                         size="sm"
