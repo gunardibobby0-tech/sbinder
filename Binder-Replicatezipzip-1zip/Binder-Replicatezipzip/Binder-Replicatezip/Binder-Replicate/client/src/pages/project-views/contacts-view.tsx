@@ -406,6 +406,7 @@ function CrewMasterDialog({ crewMaster, isLoading }: { crewMaster: CrewMaster[];
                     <TableHead className="text-white">Name</TableHead>
                     <TableHead className="text-white">Title</TableHead>
                     <TableHead className="text-white">Department</TableHead>
+                    <TableHead className="text-white">Compensation</TableHead>
                     <TableHead className="text-white">Contact</TableHead>
                     <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
@@ -417,8 +418,11 @@ function CrewMasterDialog({ crewMaster, isLoading }: { crewMaster: CrewMaster[];
                       <TableCell className="text-muted-foreground">{member.title}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                          {member.department}
+                          {member.department || "—"}
                         </span>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {member.costAmount ? `${member.costAmount} ${member.currency || "IDR"} (${member.paymentType || "fixed"})` : "—"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {member.email || member.phone || "—"}
@@ -473,6 +477,9 @@ function AddCrewMasterInlineDialog({ onCreate }: { onCreate: () => void }) {
       email: "",
       phone: "",
       notes: "",
+      costAmount: "",
+      paymentType: "fixed",
+      currency: "IDR",
     },
   });
 
@@ -486,6 +493,9 @@ function AddCrewMasterInlineDialog({ onCreate }: { onCreate: () => void }) {
     });
   };
 
+  const departmentOptions = ["Camera", "Lighting", "Sound", "Grip", "Production", "Acting", "Management", "Other"];
+  const paymentTypeOptions = ["fixed", "hourly", "daily"];
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -494,7 +504,7 @@ function AddCrewMasterInlineDialog({ onCreate }: { onCreate: () => void }) {
           Add Talent
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-[#1c2128] border-white/10 text-white">
+      <DialogContent className="bg-[#1c2128] border-white/10 text-white max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Talent to Crew Master</DialogTitle>
         </DialogHeader>
@@ -530,12 +540,122 @@ function AddCrewMasterInlineDialog({ onCreate }: { onCreate: () => void }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs">Department</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-black/20 border-white/10 text-sm">
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-[#1c2128] border-white/10 text-white">
+                      {departmentOptions.map((dept) => (
+                        <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            
+            <div className="border-t border-white/10 pt-2 mt-3">
+              <p className="text-xs font-semibold text-muted-foreground mb-3">Salary & Compensation</p>
+            </div>
+
+            <FormField
+              control={form.control}
+              name="costAmount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Amount</FormLabel>
                   <FormControl>
-                    <Input {...field} className="bg-black/20 border-white/10 text-sm" value={field.value ?? ""} />
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" placeholder="e.g., 500000" value={field.value ?? ""} />
                   </FormControl>
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-2">
+              <FormField
+                control={form.control}
+                name="paymentType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-black/20 border-white/10 text-sm h-8">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-[#1c2128] border-white/10 text-white">
+                        {paymentTypeOptions.map((type) => (
+                          <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Currency</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-black/20 border-white/10 text-sm h-8">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-[#1c2128] border-white/10 text-white">
+                        <SelectItem value="IDR">IDR</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Email</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" placeholder="email@example.com" value={field.value ?? ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Phone</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" placeholder="+1 (555) 000-0000" value={field.value ?? ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Notes</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" placeholder="Additional notes..." value={field.value ?? ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
             <Button type="submit" disabled={isPending} className="w-full bg-primary hover:bg-primary/90 text-sm">
               {isPending && <Loader2 className="w-3 h-3 animate-spin mr-2" />}
               Add Talent
@@ -560,6 +680,9 @@ function EditCrewMasterInlineDialog({ member, onClose }: { member: CrewMaster; o
       email: member.email || "",
       phone: member.phone || "",
       notes: member.notes || "",
+      costAmount: member.costAmount || "",
+      paymentType: member.paymentType || "fixed",
+      currency: member.currency || "IDR",
     },
   });
 
@@ -572,9 +695,12 @@ function EditCrewMasterInlineDialog({ member, onClose }: { member: CrewMaster; o
     });
   };
 
+  const departmentOptions = ["Camera", "Lighting", "Sound", "Grip", "Production", "Acting", "Management", "Other"];
+  const paymentTypeOptions = ["fixed", "hourly", "daily"];
+
   return (
     <Dialog open={open} onOpenChange={(val) => { if (!val) onClose(); }}>
-      <DialogContent className="bg-[#1c2128] border-white/10 text-white">
+      <DialogContent className="bg-[#1c2128] border-white/10 text-white max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Talent</DialogTitle>
         </DialogHeader>
@@ -610,12 +736,122 @@ function EditCrewMasterInlineDialog({ member, onClose }: { member: CrewMaster; o
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs">Department</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-black/20 border-white/10 text-sm">
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-[#1c2128] border-white/10 text-white">
+                      {departmentOptions.map((dept) => (
+                        <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+
+            <div className="border-t border-white/10 pt-2 mt-3">
+              <p className="text-xs font-semibold text-muted-foreground mb-3">Salary & Compensation</p>
+            </div>
+
+            <FormField
+              control={form.control}
+              name="costAmount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Amount</FormLabel>
                   <FormControl>
-                    <Input {...field} className="bg-black/20 border-white/10 text-sm" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || "")} />
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" placeholder="e.g., 500000" value={field.value ?? ""} />
                   </FormControl>
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-2">
+              <FormField
+                control={form.control}
+                name="paymentType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-black/20 border-white/10 text-sm h-8">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-[#1c2128] border-white/10 text-white">
+                        {paymentTypeOptions.map((type) => (
+                          <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Currency</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-black/20 border-white/10 text-sm h-8">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-[#1c2128] border-white/10 text-white">
+                        <SelectItem value="IDR">IDR</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Email</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" placeholder="email@example.com" value={field.value ?? ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Phone</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" placeholder="+1 (555) 000-0000" value={field.value ?? ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Notes</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="bg-black/20 border-white/10 text-sm" placeholder="Additional notes..." value={field.value ?? ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
             <Button type="submit" disabled={isPending} className="w-full bg-primary hover:bg-primary/90 text-sm">
               {isPending && <Loader2 className="w-3 h-3 animate-spin mr-2" />}
               Save Changes
