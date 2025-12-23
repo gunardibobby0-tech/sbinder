@@ -982,7 +982,8 @@ Return only JSON array of IDs by relevance: [1,3,5]`
       const storyboards = await storage.getStoryboards(Number(req.params.projectId));
       res.json(storyboards);
     } catch (err) {
-      res.status(500).json({ error: "Failed to fetch storyboards" });
+      console.error("Failed to fetch storyboards:", err);
+      res.status(500).json({ error: "Failed to fetch storyboards", details: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -994,7 +995,8 @@ Return only JSON array of IDs by relevance: [1,3,5]`
       });
       res.status(201).json(storyboard);
     } catch (err) {
-      res.status(500).json({ error: "Failed to create storyboard" });
+      console.error("Failed to create storyboard:", err);
+      res.status(500).json({ error: "Failed to create storyboard", details: err instanceof Error ? err.message : String(err) });
     }
   });
 
