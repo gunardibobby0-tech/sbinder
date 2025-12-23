@@ -511,7 +511,14 @@ export async function registerRoutes(
   app.post(api.events.create.path, async (req, res) => {
     
     try {
-      const input = api.events.create.input.parse(req.body);
+      // Parse ISO date strings to Date objects
+      const body = {
+        ...req.body,
+        startTime: typeof req.body.startTime === 'string' ? new Date(req.body.startTime) : req.body.startTime,
+        endTime: typeof req.body.endTime === 'string' ? new Date(req.body.endTime) : req.body.endTime,
+      };
+      
+      const input = api.events.create.input.parse(body);
       const event = await storage.createEvent({
         ...input,
         projectId: Number(req.params.projectId)
