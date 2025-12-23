@@ -57,7 +57,7 @@ export interface IStorage {
   // Events
   getEvents(projectId: number): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
-  updateEvent(id: number, data: Partial<Event>): Promise<Event>;
+  updateEvent(id: number, data: Partial<Event> & { order?: number }): Promise<Event>;
   deleteEvent(id: number): Promise<void>;
 
   // Settings

@@ -3,7 +3,7 @@ import { useRoute, useLocation } from "wouter";
 import { LayoutShell } from "@/components/layout-shell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, FileText, Users, CalendarDays, Settings, DollarSign, BarChart3, Film, Images } from "lucide-react";
+import { Loader2, ArrowLeft, FileText, Users, CalendarDays, Settings, DollarSign, BarChart3, Film, Images, Layers } from "lucide-react";
 import ScriptView from "./project-views/script-view";
 import ContactsView from "./project-views/contacts-view";
 import ScheduleView from "./project-views/schedule-view";
@@ -11,6 +11,7 @@ import BudgetView from "./project-views/budget-view";
 import TimelineView from "./project-views/timeline-view";
 import ShotListView from "./project-views/shot-list-view";
 import StoryboardView from "./project-views/storyboard-view";
+import StripboardView from "./project-views/stripboard-view";
 
 export default function ProjectDetails() {
   const [match, params] = useRoute("/project/:id");
@@ -123,6 +124,13 @@ export default function ProjectDetails() {
                 <Images className="w-4 h-4 mr-2" />
                 Storyboards
               </TabsTrigger>
+              <TabsTrigger 
+                value="stripboard" 
+                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 font-medium whitespace-nowrap"
+              >
+                <Layers className="w-4 h-4 mr-2" />
+                Stripboard
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -147,6 +155,9 @@ export default function ProjectDetails() {
             </TabsContent>
             <TabsContent value="storyboards" className="h-full m-0 p-0 overflow-auto">
               <StoryboardView projectId={projectId} />
+            </TabsContent>
+            <TabsContent value="stripboard" className="h-full m-0 p-0 overflow-auto">
+              <StripboardView projectId={projectId} />
             </TabsContent>
           </div>
         </Tabs>

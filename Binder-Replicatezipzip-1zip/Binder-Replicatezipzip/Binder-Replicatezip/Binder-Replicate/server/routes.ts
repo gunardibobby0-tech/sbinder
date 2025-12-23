@@ -921,6 +921,53 @@ Return only JSON array of IDs by relevance: [1,3,5]`
     }
   });
 
+  // === Stripboard ===
+  app.get("/api/projects/:projectId/stripboard/events", async (req, res) => {
+    try {
+      const projectId = Number(req.params.projectId);
+      const events = await storage.getEvents(projectId);
+      res.json(events);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch stripboard events" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/stripboard/reorder", async (req, res) => {
+    try {
+      const input = z.object({
+        orderedEventIds: z.array(z.number()),
+      }).parse(req.body);
+      
+      const projectId = Number(req.params.projectId);
+      const reorderedEvents = [];
+      
+      for (let i = 0; i < input.orderedEventIds.length; i++) {
+        const updated = await storage.updateEvent(input.orderedEventIds[i], { order: i });
+        reorderedEvents.push(updated);
+      }
+      
+      res.json(reorderedEvents);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ error: "Failed to reorder events" });
+    }
+  });
+
+  app.put("/api/events/:eventId/order", async (req, res) => {
+    try {
+      const input = z.object({
+        order: z.number(),
+      }).parse(req.body);
+      
+      const event = await storage.updateEvent(Number(req.params.eventId), { order: input.order });
+      res.json(event);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to update event order" });
+    }
+  });
+
   // === Storyboards ===
   app.get("/api/projects/:projectId/storyboards", async (req, res) => {
     try {
