@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
@@ -7,6 +7,12 @@ import { setupAuth, registerAuthRoutes } from "./auth";
 import { registerChatRoutes } from "./replit_integrations/chat";
 import { extractScriptData, generateScript, fetchOpenRouterModels } from "./replit_integrations/ai/client";
 import { generateCallSheetPDF } from "./pdf-generator";
+
+// Helper to safely extract and validate userId with proper typing
+function extractUserId(req: Request): string | null {
+  const user = req.user as { id?: string } | undefined;
+  return user?.id || null;
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -19,7 +25,7 @@ export async function registerRoutes(
 
   // === Settings ===
   app.get(api.settings.get.path, async (req, res) => {
-    const userId = (req.user as any)?.id;
+    const userId = extractUserId(req);
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -41,7 +47,7 @@ export async function registerRoutes(
   });
 
   app.put(api.settings.update.path, async (req, res) => {
-    const userId = (req.user as any)?.id;
+    const userId = extractUserId(req);
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -50,10 +56,6 @@ export async function registerRoutes(
         openaiKey: z.string().optional(),
         preferredModel: z.string().optional(),
       }).parse(req.body);
-      
-      if (input.openaiKey) {
-        process.env.OPENROUTER_API_KEY = input.openaiKey;
-      }
       
       await storage.updateUserSettings(userId, {
         openrouterToken: input.openaiKey,
@@ -73,21 +75,32 @@ export async function registerRoutes(
 
   // === Projects ===
   app.get(api.projects.list.path, async (req, res) => {
-    const userId = (req.user as any)?.id || "user_1";
+    const userId = extractUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const projects = await storage.getProjects(userId);
     res.json(projects);
   });
 
   app.get(api.projects.get.path, async (req, res) => {
+    const userId = extractUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const project = await storage.getProject(Number(req.params.id));
     if (!project) return res.sendStatus(404);
+    if (project.ownerId !== userId) return res.sendStatus(403);
     res.json(project);
   });
 
   app.post(api.projects.create.path, async (req, res) => {
     try {
       const input = api.projects.create.input.parse(req.body);
-      const userId = (req.user as any)?.id || "user_1";
+      const userId = extractUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
       const project = await storage.createProject({ ...input, ownerId: userId });
       res.status(201).json(project);
     } catch (err) {
@@ -171,7 +184,10 @@ export async function registerRoutes(
     try {
       const input = api.documents.import.input.parse(req.body);
       const projectId = Number(req.params.projectId);
-      const userId = (req.user as any).claims.sub;
+      const userId = extractUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
 
       const userSettings = await storage.getUserSettings(userId);
       const model = input.model || userSettings?.preferredModel || "meta-llama/llama-3.3-70b-instruct";
@@ -245,7 +261,10 @@ export async function registerRoutes(
     try {
       const input = api.documents.generate.input.parse(req.body);
       const docId = Number(req.params.id);
-      const userId = (req.user as any)?.id || "user_1";
+      const userId = extractUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
 
       const document = await storage.getDocument(docId);
       if (!document) return res.sendStatus(404);
@@ -278,7 +297,10 @@ export async function registerRoutes(
     try {
       const { scriptContent, model, dateRange, daysOfWeek } = req.body;
       const projectId = Number(req.params.projectId);
-      const userId = (req.user as any)?.id || "user_1";
+      const userId = extractUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
 
       if (!scriptContent) {
         return res.status(400).json({ message: "scriptContent is required" });
@@ -679,14 +701,19 @@ Return only JSON array of IDs by relevance: [1,3,5]`
       
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content || "[]";
+      
+      let ids: number[] = [];
       try {
-        const ids = JSON.parse(content);
-        const suggested = existingCrew.filter(c => ids.includes(c.id));
-        res.json(suggested.length > 0 ? suggested : existingCrew.slice(0, 3));
-      } catch (parseError) {
-        console.error("Failed to parse crew suggestion JSON:", parseError);
-        res.json(existingCrew.slice(0, 3));
+        ids = JSON.parse(content);
+        if (!Array.isArray(ids)) {
+          ids = [];
+        }
+      } catch {
+        ids = [];
       }
+      
+      const suggested = existingCrew.filter(c => ids.includes(c.id));
+      res.json(suggested.length > 0 ? suggested : existingCrew.slice(0, 3));
     } catch (error) {
       const existingCrew = await storage.getCrew(Number(req.params.projectId));
       res.json(existingCrew.slice(0, 3));
