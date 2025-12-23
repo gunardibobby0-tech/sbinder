@@ -1,5 +1,5 @@
 import { 
-  users, projects, documents, cast, crewMaster, contacts, events, userSettings, crew, crewAssignments, equipment, equipmentAssignments, budgets, budgetLineItems, shotList, locations, locationGallery, documentVersions,
+  users, projects, documents, cast, crewMaster, contacts, events, userSettings, crew, crewAssignments, equipment, equipmentAssignments, budgets, budgetLineItems, shotList, locations, locationGallery, documentVersions, storyboards, storyboardImages,
   type User,
   type Project, type InsertProject,
   type Document, type InsertDocument,
@@ -17,10 +17,12 @@ import {
   type ShotList, type InsertShotList,
   type Location, type InsertLocation,
   type LocationGallery, type InsertLocationGallery,
-  type DocumentVersion, type InsertDocumentVersion
+  type DocumentVersion, type InsertDocumentVersion,
+  type Storyboard, type InsertStoryboard,
+  type StoryboardImage, type InsertStoryboardImage
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, asc } from "drizzle-orm";
 
 export interface IStorage {
   // Projects
@@ -606,46 +608,35 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Storyboards - Mock implementation
-  async getStoryboards(projectId: number): Promise<any[]> {
-    const storyboards: any[] = [];
-    try {
-      // Try to get from database if table exists, otherwise return empty
-      return storyboards;
-    } catch {
-      return storyboards;
-    }
+  // Storyboards
+  async getStoryboards(projectId: number): Promise<Storyboard[]> {
+    return await db.select().from(storyboards)
+      .where(eq(storyboards.projectId, projectId))
+      .orderBy(desc(storyboards.createdAt));
   }
 
-  async createStoryboard(data: any): Promise<any> {
-    const storyboard = {
-      id: Math.floor(Math.random() * 1000000),
-      ...data,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    return storyboard;
+  async createStoryboard(data: InsertStoryboard): Promise<Storyboard> {
+    const [newStoryboard] = await db.insert(storyboards).values(data).returning();
+    return newStoryboard;
   }
 
   async deleteStoryboard(id: number): Promise<void> {
-    // Mock deletion
+    await db.delete(storyboards).where(eq(storyboards.id, id));
   }
 
-  async getStoryboardImages(storyboardId: number): Promise<any[]> {
-    return [];
+  async getStoryboardImages(storyboardId: number): Promise<StoryboardImage[]> {
+    return await db.select().from(storyboardImages)
+      .where(eq(storyboardImages.storyboardId, storyboardId))
+      .orderBy(asc(storyboardImages.sequenceOrder));
   }
 
-  async addStoryboardImage(data: any): Promise<any> {
-    const image = {
-      id: Math.floor(Math.random() * 1000000),
-      ...data,
-      createdAt: new Date().toISOString(),
-    };
-    return image;
+  async addStoryboardImage(data: InsertStoryboardImage): Promise<StoryboardImage> {
+    const [newImage] = await db.insert(storyboardImages).values(data).returning();
+    return newImage;
   }
 
   async deleteStoryboardImage(id: number): Promise<void> {
-    // Mock deletion
+    await db.delete(storyboardImages).where(eq(storyboardImages.id, id));
   }
 
   // Team Collaboration - Mock implementations

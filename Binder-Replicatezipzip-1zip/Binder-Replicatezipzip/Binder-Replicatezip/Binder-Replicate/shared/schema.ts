@@ -197,6 +197,24 @@ export const documentVersions = pgTable("document_versions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const storyboards = pgTable("storyboards", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const storyboardImages = pgTable("storyboard_images", {
+  id: serial("id").primaryKey(),
+  storyboardId: integer("storyboard_id").notNull(),
+  imageUrl: text("image_url").notNull(),
+  caption: text("caption"),
+  sequenceOrder: integer("sequence_order"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // === SCHEMAS ===
 
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true });
@@ -216,6 +234,8 @@ export const insertShotListSchema = createInsertSchema(shotList).omit({ id: true
 export const insertLocationSchema = createInsertSchema(locations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertLocationGallerySchema = createInsertSchema(locationGallery).omit({ id: true, createdAt: true });
 export const insertDocumentVersionSchema = createInsertSchema(documentVersions).omit({ id: true, createdAt: true });
+export const insertStoryboardSchema = createInsertSchema(storyboards).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertStoryboardImageSchema = createInsertSchema(storyboardImages).omit({ id: true, createdAt: true });
 
 // === TYPES ===
 
@@ -269,3 +289,9 @@ export type InsertLocationGallery = z.infer<typeof insertLocationGallerySchema>;
 
 export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type InsertDocumentVersion = z.infer<typeof insertDocumentVersionSchema>;
+
+export type Storyboard = typeof storyboards.$inferSelect;
+export type InsertStoryboard = z.infer<typeof insertStoryboardSchema>;
+
+export type StoryboardImage = typeof storyboardImages.$inferSelect;
+export type InsertStoryboardImage = z.infer<typeof insertStoryboardImageSchema>;
