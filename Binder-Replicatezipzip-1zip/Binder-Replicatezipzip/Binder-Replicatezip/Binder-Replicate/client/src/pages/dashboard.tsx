@@ -24,11 +24,11 @@ export default function Dashboard() {
 
   return (
     <LayoutShell>
-      <div className="p-6 lg:p-12 max-w-7xl mx-auto space-y-8 animate-in">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="px-content py-content max-w-7xl mx-auto space-comfortable animate-in">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-display font-bold text-white mb-2">Projects</h1>
-            <p className="text-muted-foreground">Manage your productions, scripts, and schedules.</p>
+            <h1 className="text-4xl font-display font-bold text-white">Projects</h1>
+            <p className="text-muted-foreground text-base mt-2 leading-relaxed">Manage your productions, scripts, and schedules.</p>
           </div>
           <CreateProjectDialog />
         </div>

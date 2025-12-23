@@ -44,33 +44,52 @@
 @layer base {
   body {
     @apply bg-background text-foreground antialiased font-sans;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.4px;
+    line-height: 1.6;
   }
   
   h1 {
     font-family: var(--font-display);
-    @apply text-3xl font-bold tracking-wider uppercase;
+    @apply text-4xl font-bold tracking-wider uppercase;
     letter-spacing: 1.2px;
+    line-height: 1.2;
+    margin-bottom: 0.5em;
   }
 
   h2 {
     font-family: var(--font-display);
-    @apply text-2xl font-bold tracking-wider uppercase;
-    letter-spacing: 1px;
+    @apply text-2xl font-bold tracking-wide uppercase;
+    letter-spacing: 0.9px;
+    line-height: 1.3;
+    margin-bottom: 0.75em;
   }
 
-  h3, h4, h5, h6 {
+  h3 {
     font-family: var(--font-display);
-    @apply font-bold tracking-wider uppercase;
-    letter-spacing: 0.8px;
+    @apply text-lg font-bold tracking-wide uppercase;
+    letter-spacing: 0.7px;
+    line-height: 1.4;
+    margin-bottom: 0.5em;
   }
 
-  h4 { @apply text-lg; }
-  h5 { @apply text-base; }
-  h6 { @apply text-sm; }
+  h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply font-bold tracking-wide uppercase;
+    letter-spacing: 0.6px;
+    line-height: 1.5;
+  }
+
+  h4 { @apply text-lg; margin-bottom: 0.5em; }
+  h5 { @apply text-base; margin-bottom: 0.4em; }
+  h6 { @apply text-sm; margin-bottom: 0.4em; }
 
   p {
     @apply leading-relaxed;
+    margin-bottom: 1em;
+  }
+
+  label {
+    @apply text-sm font-semibold text-gray-200 block mb-2;
   }
 
   /* Custom Scrollbar for that pro app feel */
@@ -96,10 +115,20 @@
   /* Better input styling */
   input, textarea, select {
     @apply transition-all duration-200 ease-out;
+    font-size: 1rem;
+  }
+
+  input::placeholder, textarea::placeholder {
+    @apply text-gray-500;
   }
 
   input:focus, textarea:focus, select:focus {
-    @apply ring-2 ring-primary/50 ring-offset-1 ring-offset-background;
+    @apply ring-2 ring-primary/60 ring-offset-2 ring-offset-background;
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+
+  input:disabled, textarea:disabled, select:disabled {
+    @apply opacity-50 cursor-not-allowed;
   }
 }
 
@@ -319,15 +348,24 @@
 
 /* Section Headers */
 .section-header {
-  @apply pb-4 border-b border-white/5;
+  @apply pb-6 border-b border-white/5 mb-6;
 }
 
 .section-header h2 {
-  @apply text-white mb-1;
+  @apply text-white mb-2 text-2xl;
 }
 
 .section-header p {
-  @apply text-sm text-muted-foreground;
+  @apply text-sm text-muted-foreground leading-relaxed;
+}
+
+/* Content Sections */
+.section-title {
+  @apply text-lg font-bold text-white mb-4 uppercase tracking-wide;
+}
+
+.section-subtitle {
+  @apply text-sm text-muted-foreground mb-4;
 }
 
 /* Loading States */
@@ -395,11 +433,52 @@
 
 /* Text Styles */
 .text-subtle {
-  @apply text-muted-foreground text-sm;
+  @apply text-muted-foreground text-sm leading-relaxed;
 }
 
 .text-accent {
   @apply text-primary font-semibold;
+}
+
+.text-help {
+  @apply text-xs text-muted-foreground mt-1;
+}
+
+/* Spacing Utilities */
+.space-tight {
+  @apply space-y-2;
+}
+
+.space-relaxed {
+  @apply space-y-4;
+}
+
+.space-comfortable {
+  @apply space-y-6;
+}
+
+/* Container Padding */
+.px-content {
+  @apply px-6 lg:px-12;
+}
+
+.py-content {
+  @apply py-6 lg:py-10;
+}
+
+/* Card Spacing */
+.card-padding {
+  @apply p-5 sm:p-6;
+}
+
+/* Better List Styling */
+ul, ol {
+  @apply space-y-2;
+  @apply ml-4;
+}
+
+li {
+  @apply text-foreground;
 }
 
 /* Dark Input Focus */

@@ -30,11 +30,11 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
           </h1>
         </div>
 
-        <nav className="space-y-1">
+        <nav className="space-y-1.5">
           <Link href="/dashboard">
             <Button
               variant={location === "/dashboard" ? "secondary" : "ghost"}
-              className="w-full justify-start gap-3 h-12 text-base font-medium"
+              className="w-full justify-start gap-3 h-11 text-sm font-semibold tracking-wide transition-all duration-200"
             >
               <LayoutDashboard className="w-5 h-5 opacity-70" />
               Projects
@@ -43,7 +43,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
           <Link href="/chat">
             <Button
               variant={location === "/chat" ? "secondary" : "ghost"}
-              className="w-full justify-start gap-3 h-12 text-base font-medium"
+              className="w-full justify-start gap-3 h-11 text-sm font-semibold tracking-wide transition-all duration-200"
             >
               <MessageCircle className="w-5 h-5 opacity-70" />
               Chat
@@ -52,7 +52,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
           <Link href="/settings">
             <Button
               variant={location === "/settings" ? "secondary" : "ghost"}
-              className="w-full justify-start gap-3 h-12 text-base font-medium"
+              className="w-full justify-start gap-3 h-11 text-sm font-semibold tracking-wide transition-all duration-200"
             >
               <Settings className="w-5 h-5 opacity-70" />
               Settings
@@ -63,11 +63,11 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
 
       <div className="mt-auto p-6 border-t border-white/5 bg-black/20">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-primary/30">
             {user?.firstName?.[0] || user?.email?.[0] || "U"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">
+            <p className="text-sm font-semibold text-white truncate">
               {user?.firstName || "User"}
             </p>
             <p className="text-xs text-muted-foreground truncate">
