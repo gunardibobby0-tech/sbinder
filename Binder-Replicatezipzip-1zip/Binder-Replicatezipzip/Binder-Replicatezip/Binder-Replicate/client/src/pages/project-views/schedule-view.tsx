@@ -35,7 +35,7 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
   const { data: crew } = useCrew(projectId);
   const { data: assignments = [] } = useCrewAssignments(projectId);
   const { mutate: createEvent, isPending: isCreating } = useCreateEvent();
-  const { mutate: deleteEvent, isPending: isDeleting } = useDeleteEvent();
+  const deleteEvent = useDeleteEvent();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -298,10 +298,10 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                         className="text-red-400 hover:text-red-500 hover:bg-red-500/10"
                         onClick={() => {
                           if (event.id && confirm("Delete this event?")) {
-                            deleteEvent(event.id);
+                            deleteEvent.mutate({ projectId, eventId: event.id });
                           }
                         }}
-                        disabled={isDeleting}
+                        disabled={deleteEvent.isPending}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

@@ -441,6 +441,8 @@ export async function registerRoutes(
 
   // === Crew Master ===
   app.get("/api/crew-master", async (req, res) => {
+    // CrewMaster is a global shared talent database visible to all authenticated users
+    // This allows team members to reference common talent across all projects
     const crewMaster = await storage.getCrewMaster();
     res.json(crewMaster);
   });

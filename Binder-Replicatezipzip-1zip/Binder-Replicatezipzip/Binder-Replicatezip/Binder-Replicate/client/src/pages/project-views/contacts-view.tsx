@@ -293,7 +293,7 @@ function AddCastDialog({ projectId, crewMaster }: { projectId: number; crewMaste
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
                     <FormControl>
                       <SelectTrigger className="bg-black/20 border-white/10">
                         <SelectValue placeholder="Select role type" />
@@ -565,7 +565,7 @@ function AddCrewMasterInlineDialog({ onCreate }: { onCreate: () => void }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs">Department</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
                     <FormControl>
                       <SelectTrigger className="bg-black/20 border-white/10 text-sm">
                         <SelectValue placeholder="Select department" />
@@ -605,7 +605,7 @@ function AddCrewMasterInlineDialog({ onCreate }: { onCreate: () => void }) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs">Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
                       <FormControl>
                         <SelectTrigger className="bg-black/20 border-white/10 text-sm h-8">
                           <SelectValue placeholder="Select" />
@@ -626,7 +626,7 @@ function AddCrewMasterInlineDialog({ onCreate }: { onCreate: () => void }) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs">Currency</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
                       <FormControl>
                         <SelectTrigger className="bg-black/20 border-white/10 text-sm h-8">
                           <SelectValue placeholder="Select" />
@@ -761,7 +761,7 @@ function EditCrewMasterInlineDialog({ member, onClose }: { member: CrewMaster; o
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs">Department</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
                     <FormControl>
                       <SelectTrigger className="bg-black/20 border-white/10 text-sm">
                         <SelectValue placeholder="Select department" />
@@ -801,7 +801,7 @@ function EditCrewMasterInlineDialog({ member, onClose }: { member: CrewMaster; o
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs">Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
                       <FormControl>
                         <SelectTrigger className="bg-black/20 border-white/10 text-sm h-8">
                           <SelectValue placeholder="Select" />
@@ -822,7 +822,7 @@ function EditCrewMasterInlineDialog({ member, onClose }: { member: CrewMaster; o
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs">Currency</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
                       <FormControl>
                         <SelectTrigger className="bg-black/20 border-white/10 text-sm h-8">
                           <SelectValue placeholder="Select" />
@@ -929,7 +929,7 @@ function EditCastDialog({ projectId, castItem, crewMaster, onClose }: { projectI
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
                     <FormControl>
                       <SelectTrigger className="bg-black/20 border-white/10">
                         <SelectValue placeholder="Select role type" />
@@ -1087,7 +1087,7 @@ function AddContactDialog({ projectId }: { projectId: number }) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Department</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
                       <FormControl>
                         <SelectTrigger className="bg-black/20 border-white/10">
                           <SelectValue placeholder="Select dept" />

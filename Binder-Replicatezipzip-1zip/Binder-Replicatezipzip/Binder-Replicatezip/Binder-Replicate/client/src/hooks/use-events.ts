@@ -46,12 +46,11 @@ export function useUpdateEvent() {
 export function useDeleteEvent() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (eventId: number) => {
-      await apiRequest("DELETE", `/api/projects/999/events/${eventId}`);
+    mutationFn: async ({ projectId, eventId }: { projectId: number; eventId: number }) => {
+      await apiRequest("DELETE", `/api/projects/${projectId}/events/${eventId}`);
     },
-    onSuccess: () => {
-      // Invalidate all events queries
-      queryClient.invalidateQueries({ queryKey: [/\/api\/projects\/\d+\/events/] });
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/events`] });
     },
   });
 }
