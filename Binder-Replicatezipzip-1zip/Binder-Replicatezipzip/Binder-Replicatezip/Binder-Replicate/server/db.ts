@@ -78,6 +78,30 @@ export const db = drizzle({ client: pool, schema });
           ADD COLUMN IF NOT EXISTS "payment_type" text,
           ADD COLUMN IF NOT EXISTS "currency" text DEFAULT 'IDR'
         `);
+
+        // Create storyboards table if missing
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS "storyboards" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "project_id" integer NOT NULL,
+            "title" text NOT NULL,
+            "description" text,
+            "created_at" timestamp DEFAULT now(),
+            "updated_at" timestamp DEFAULT now()
+          )
+        `);
+
+        // Create storyboard_images table if missing
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS "storyboard_images" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "storyboard_id" integer NOT NULL,
+            "image_url" text NOT NULL,
+            "caption" text,
+            "sequence_order" integer,
+            "created_at" timestamp DEFAULT now()
+          )
+        `);
         
         console.log('✓ All required tables ready');
       } catch (tableErr) {
