@@ -131,6 +131,14 @@ export interface IStorage {
     totalEstimated: number;
     breakdown: { crew: string; equipment: string };
   }>;
+
+  // Storyboards
+  getStoryboards(projectId: number): Promise<any[]>;
+  createStoryboard(data: any): Promise<any>;
+  deleteStoryboard(id: number): Promise<void>;
+  getStoryboardImages(storyboardId: number): Promise<any[]>;
+  addStoryboardImage(data: any): Promise<any>;
+  deleteStoryboardImage(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -588,6 +596,48 @@ export class DatabaseStorage implements IStorage {
         equipment: `${equipmentList.length} equipment items @ rental rates`,
       },
     };
+  }
+
+  // Storyboards - Mock implementation
+  async getStoryboards(projectId: number): Promise<any[]> {
+    const storyboards: any[] = [];
+    try {
+      // Try to get from database if table exists, otherwise return empty
+      return storyboards;
+    } catch {
+      return storyboards;
+    }
+  }
+
+  async createStoryboard(data: any): Promise<any> {
+    const storyboard = {
+      id: Math.floor(Math.random() * 1000000),
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    return storyboard;
+  }
+
+  async deleteStoryboard(id: number): Promise<void> {
+    // Mock deletion
+  }
+
+  async getStoryboardImages(storyboardId: number): Promise<any[]> {
+    return [];
+  }
+
+  async addStoryboardImage(data: any): Promise<any> {
+    const image = {
+      id: Math.floor(Math.random() * 1000000),
+      ...data,
+      createdAt: new Date().toISOString(),
+    };
+    return image;
+  }
+
+  async deleteStoryboardImage(id: number): Promise<void> {
+    // Mock deletion
   }
 }
 

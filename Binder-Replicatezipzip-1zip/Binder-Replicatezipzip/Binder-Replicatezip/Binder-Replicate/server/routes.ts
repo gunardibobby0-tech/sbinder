@@ -921,5 +921,86 @@ Return only JSON array of IDs by relevance: [1,3,5]`
     }
   });
 
+  // === Storyboards ===
+  app.get("/api/projects/:projectId/storyboards", async (req, res) => {
+    try {
+      const projectId = Number(req.params.projectId);
+      const storyboards = await storage.getStoryboards(projectId);
+      res.json(storyboards);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch storyboards" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/storyboards", async (req, res) => {
+    try {
+      const input = z.object({
+        title: z.string(),
+        description: z.string().optional(),
+      }).parse(req.body);
+      const projectId = Number(req.params.projectId);
+      const storyboard = await storage.createStoryboard({
+        projectId,
+        title: input.title,
+        description: input.description || "",
+      });
+      res.status(201).json(storyboard);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ error: "Failed to create storyboard" });
+    }
+  });
+
+  app.delete("/api/storyboards/:storyboardId", async (req, res) => {
+    try {
+      await storage.deleteStoryboard(Number(req.params.storyboardId));
+      res.sendStatus(204);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to delete storyboard" });
+    }
+  });
+
+  app.get("/api/storyboards/:storyboardId/images", async (req, res) => {
+    try {
+      const images = await storage.getStoryboardImages(Number(req.params.storyboardId));
+      res.json(images);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch images" });
+    }
+  });
+
+  app.post("/api/storyboards/:storyboardId/images", async (req, res) => {
+    try {
+      const input = z.object({
+        imageUrl: z.string(),
+        caption: z.string().optional(),
+        order: z.number(),
+      }).parse(req.body);
+      const image = await storage.addStoryboardImage({
+        storyboardId: Number(req.params.storyboardId),
+        imageUrl: input.imageUrl,
+        caption: input.caption || "",
+        order: input.order,
+      });
+      res.status(201).json(image);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ error: "Failed to add image" });
+    }
+  });
+
+  app.delete("/api/storyboards/images/:imageId", async (req, res) => {
+    try {
+      await storage.deleteStoryboardImage(Number(req.params.imageId));
+      res.sendStatus(204);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to delete image" });
+    }
+  });
+
   return httpServer;
 }
