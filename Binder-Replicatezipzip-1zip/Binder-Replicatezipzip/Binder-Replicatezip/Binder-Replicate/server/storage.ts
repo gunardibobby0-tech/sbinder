@@ -139,6 +139,14 @@ export interface IStorage {
   getStoryboardImages(storyboardId: number): Promise<any[]>;
   addStoryboardImage(data: any): Promise<any>;
   deleteStoryboardImage(id: number): Promise<void>;
+
+  // Team Collaboration
+  getProjectMembers(projectId: number): Promise<any[]>;
+  getProjectInvitations(projectId: number): Promise<any[]>;
+  inviteProjectMember(projectId: number, email: string, role: string): Promise<any>;
+  removeProjectMember(projectId: number, memberId: number): Promise<void>;
+  updateMemberRole(projectId: number, memberId: number, role: string): Promise<any>;
+  getProjectActivity(projectId: number): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -638,6 +646,47 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStoryboardImage(id: number): Promise<void> {
     // Mock deletion
+  }
+
+  // Team Collaboration - Mock implementations
+  async getProjectMembers(projectId: number): Promise<any[]> {
+    return [{
+      id: 1,
+      projectId,
+      userId: "user_1",
+      email: "owner@example.com",
+      userName: "You",
+      role: "owner",
+      joinedAt: new Date().toISOString(),
+    }];
+  }
+
+  async getProjectInvitations(projectId: number): Promise<any[]> {
+    return [];
+  }
+
+  async inviteProjectMember(projectId: number, email: string, role: string): Promise<any> {
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      projectId,
+      email,
+      role,
+      token: Math.random().toString(36).substring(2, 15),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  async removeProjectMember(projectId: number, memberId: number): Promise<void> {
+    // Mock removal
+  }
+
+  async updateMemberRole(projectId: number, memberId: number, role: string): Promise<any> {
+    return { id: memberId, projectId, role };
+  }
+
+  async getProjectActivity(projectId: number): Promise<any[]> {
+    return [];
   }
 }
 

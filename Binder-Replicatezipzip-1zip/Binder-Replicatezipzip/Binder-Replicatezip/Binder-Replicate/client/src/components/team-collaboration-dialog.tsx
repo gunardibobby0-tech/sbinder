@@ -9,7 +9,6 @@ import { Loader2, Users, Plus, Trash2, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import type { ProjectMember } from "@/hooks/use-team";
 
 export function TeamCollaborationDialog({ projectId }: { projectId: number }) {
   const { data: members = [], isLoading: membersLoading } = useProjectMembers(projectId);
@@ -48,13 +47,6 @@ export function TeamCollaborationDialog({ projectId }: { projectId: number }) {
           toast({
             title: "Invitation sent",
             description: `${newEmail} has been invited to the project.`,
-          });
-        },
-        onError: () => {
-          toast({
-            title: "Error",
-            description: "Failed to send invitation.",
-            variant: "destructive",
           });
         },
       }
