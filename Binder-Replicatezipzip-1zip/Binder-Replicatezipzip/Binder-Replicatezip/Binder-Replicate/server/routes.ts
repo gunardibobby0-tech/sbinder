@@ -2,6 +2,7 @@ import type { Express, Request } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
+import { insertShotListSchema } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./auth";
 import { registerChatRoutes } from "./replit_integrations/chat";
@@ -927,6 +928,51 @@ Return only JSON array of IDs by relevance: [1,3,5]`
       res.json(calculation);
     } catch (err) {
       res.status(500).json({ error: "Failed to calculate budget" });
+    }
+  });
+
+  // === Shot List ===
+  app.get("/api/projects/:projectId/shot-list", async (req, res) => {
+    try {
+      const shots = await storage.getShotList(Number(req.params.projectId));
+      res.json(shots);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch shot list" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/shot-list", async (req, res) => {
+    try {
+      const input = insertShotListSchema.parse(req.body);
+      const shot = await storage.createShotListItem(input);
+      res.status(201).json(shot);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ error: "Failed to create shot" });
+    }
+  });
+
+  app.put("/api/projects/:projectId/shot-list/:id", async (req, res) => {
+    try {
+      const updates = insertShotListSchema.partial().parse(req.body);
+      const shot = await storage.updateShotListItem(Number(req.params.id), updates);
+      res.json(shot);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ error: "Failed to update shot" });
+    }
+  });
+
+  app.delete("/api/projects/:projectId/shot-list/:id", async (req, res) => {
+    try {
+      await storage.deleteShotListItem(Number(req.params.id));
+      res.sendStatus(204);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to delete shot" });
     }
   });
 
