@@ -976,5 +976,66 @@ Return only JSON array of IDs by relevance: [1,3,5]`
     }
   });
 
+  // === Storyboards ===
+  app.get("/api/projects/:projectId/storyboards", async (req, res) => {
+    try {
+      const storyboards = await storage.getStoryboards(Number(req.params.projectId));
+      res.json(storyboards);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch storyboards" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/storyboards", async (req, res) => {
+    try {
+      const storyboard = await storage.createStoryboard({
+        projectId: Number(req.params.projectId),
+        ...req.body,
+      });
+      res.status(201).json(storyboard);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to create storyboard" });
+    }
+  });
+
+  app.delete("/api/projects/:projectId/storyboards/:storyboardId", async (req, res) => {
+    try {
+      await storage.deleteStoryboard(Number(req.params.storyboardId));
+      res.sendStatus(204);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to delete storyboard" });
+    }
+  });
+
+  app.get("/api/storyboards/:storyboardId/images", async (req, res) => {
+    try {
+      const images = await storage.getStoryboardImages(Number(req.params.storyboardId));
+      res.json(images);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch images" });
+    }
+  });
+
+  app.post("/api/storyboards/:storyboardId/images", async (req, res) => {
+    try {
+      const image = await storage.addStoryboardImage({
+        storyboardId: Number(req.params.storyboardId),
+        ...req.body,
+      });
+      res.status(201).json(image);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to add image" });
+    }
+  });
+
+  app.delete("/api/storyboards/:storyboardId/images/:imageId", async (req, res) => {
+    try {
+      await storage.deleteStoryboardImage(Number(req.params.imageId));
+      res.sendStatus(204);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to delete image" });
+    }
+  });
+
   return httpServer;
 }
