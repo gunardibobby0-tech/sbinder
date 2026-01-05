@@ -114,3 +114,28 @@ export function useDeleteImage() {
     },
   });
 }
+
+export function useGenerateImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ storyboardId, prompt, order }: { storyboardId: number; prompt: string; order: number }) => {
+      const res = await apiRequest("POST", "/api/generate-image", { prompt });
+      const { b64_json } = await res.json();
+      
+      const imageUrl = `data:image/png;base64,${b64_json}`;
+      
+      const addRes = await apiRequest("POST", `/api/storyboards/${storyboardId}/images`, {
+        storyboardId,
+        imageUrl,
+        caption: prompt,
+        order,
+      });
+      return addRes.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [`/api/storyboards/${variables.storyboardId}/images`],
+      });
+    },
+  });
+}

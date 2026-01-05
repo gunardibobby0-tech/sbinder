@@ -6,6 +6,7 @@ import { insertShotListSchema } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./auth";
 import { registerChatRoutes } from "./replit_integrations/chat";
+import { registerImageRoutes } from "./replit_integrations/image";
 import { extractScriptData, generateScript, fetchOpenRouterModels } from "./replit_integrations/ai/client";
 import { generateCallSheetPDF } from "./pdf-generator";
 
@@ -23,6 +24,7 @@ export async function registerRoutes(
   setupAuth(app);
   registerAuthRoutes(app);
   registerChatRoutes(app);
+  registerImageRoutes(app);
 
   // === Settings ===
   app.get(api.settings.get.path, async (req, res) => {

@@ -295,3 +295,4 @@ export type InsertStoryboard = z.infer<typeof insertStoryboardSchema>;
 
 export type StoryboardImage = typeof storyboardImages.$inferSelect;
 export type InsertStoryboardImage = z.infer<typeof insertStoryboardImageSchema>;
+export * from "./models/chat";

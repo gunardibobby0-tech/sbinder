@@ -1,10 +1,10 @@
-import { useStoryboards, useStoryboardImages, useCreateStoryboard, useDeleteStoryboard, useAddImage, useDeleteImage } from "@/hooks/use-storyboards";
+import { useStoryboards, useStoryboardImages, useCreateStoryboard, useDeleteStoryboard, useAddImage, useDeleteImage, useGenerateImage } from "@/hooks/use-storyboards";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
-import { Loader2, Plus, Trash2, Images } from "lucide-react";
+import { Loader2, Plus, Trash2, Images, Wand2 } from "lucide-react";
 import { useState } from "react";
 import type { Storyboard, StoryboardImage } from "@/hooks/use-storyboards";
 
@@ -14,6 +14,7 @@ export default function StoryboardView({ projectId }: { projectId: number }) {
   const deleteStoryboard = useDeleteStoryboard();
   const addImage = useAddImage();
   const deleteImage = useDeleteImage();
+  const generateImage = useGenerateImage();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedStoryboard, setSelectedStoryboard] = useState<Storyboard | null>(null);
@@ -22,6 +23,8 @@ export default function StoryboardView({ projectId }: { projectId: number }) {
   const [newDescription, setNewDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [imageCaption, setImageCaption] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationPrompt, setGenerationPrompt] = useState("");
 
   const { data: selectedImages = [] } = useStoryboardImages(selectedStoryboard?.id || 0);
 
@@ -52,6 +55,25 @@ export default function StoryboardView({ projectId }: { projectId: number }) {
         setImageCaption("");
         setImageDialogOpen(false);
       },
+    });
+  };
+
+  const handleGenerateImage = () => {
+    if (!selectedStoryboard || !generationPrompt) return;
+    setIsGenerating(true);
+    generateImage.mutate({
+      storyboardId: selectedStoryboard.id,
+      prompt: generationPrompt,
+      order: selectedImages.length + 1,
+    }, {
+      onSuccess: () => {
+        setGenerationPrompt("");
+        setIsGenerating(false);
+        setImageDialogOpen(false);
+      },
+      onError: () => {
+        setIsGenerating(false);
+      }
     });
   };
 
@@ -233,29 +255,61 @@ export default function StoryboardView({ projectId }: { projectId: number }) {
                   <DialogHeader>
                     <DialogTitle>Add Image to Storyboard</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">Image URL</label>
-                      <Input 
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        placeholder="https://example.com/image.jpg"
-                        className="bg-black/20 border-white/10 text-white mt-2"
-                      />
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold text-primary">AI Generation</h4>
+                      <div>
+                        <label className="text-sm font-medium">Prompt</label>
+                        <Textarea 
+                          value={generationPrompt}
+                          onChange={(e) => setGenerationPrompt(e.target.value)}
+                          placeholder="Cinematic shot of a detective in a dark alley..."
+                          className="bg-black/20 border-white/10 text-white mt-2 resize-none h-20"
+                        />
+                      </div>
+                      <Button 
+                        onClick={handleGenerateImage} 
+                        disabled={isGenerating || !generationPrompt} 
+                        className="w-full bg-primary hover:bg-primary/90"
+                      >
+                        {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wand2 className="w-4 h-4 mr-2" />}
+                        Generate with AI
+                      </Button>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium">Caption (optional)</label>
-                      <Textarea 
-                        value={imageCaption}
-                        onChange={(e) => setImageCaption(e.target.value)}
-                        placeholder="Describe what's in this image..."
-                        className="bg-black/20 border-white/10 text-white mt-2 resize-none h-20"
-                      />
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-white/10" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-[#1c2128] px-2 text-muted-foreground">Or add manually</span>
+                      </div>
                     </div>
-                    <Button onClick={handleAddImage} disabled={addImage.isPending || !imageUrl} className="w-full">
-                      {addImage.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                      Add Image
-                    </Button>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium">Image URL</label>
+                        <Input 
+                          value={imageUrl}
+                          onChange={(e) => setImageUrl(e.target.value)}
+                          placeholder="https://example.com/image.jpg"
+                          className="bg-black/20 border-white/10 text-white mt-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Caption (optional)</label>
+                        <Textarea 
+                          value={imageCaption}
+                          onChange={(e) => setImageCaption(e.target.value)}
+                          placeholder="Describe what's in this image..."
+                          className="bg-black/20 border-white/10 text-white mt-2 resize-none h-20"
+                        />
+                      </div>
+                      <Button onClick={handleAddImage} disabled={addImage.isPending || !imageUrl} className="w-full">
+                        {addImage.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                        Add Image
+                      </Button>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
