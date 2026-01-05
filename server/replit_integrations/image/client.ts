@@ -1,59 +1,56 @@
-import fs from "node:fs";
-import OpenAI, { toFile } from "openai";
-import { Buffer } from "node:buffer";
+import { storage } from "../../storage";
 
-export const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "dummy",
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
-
-/**
- * Generate an image and return as Buffer.
- * Uses gpt-image-1 model via Replit AI Integrations.
- */
-export async function generateImageBuffer(
-  prompt: string,
-  size: "1024x1024" | "512x512" | "256x256" = "1024x1024"
-): Promise<Buffer> {
-  const response = await openai.images.generate({
-    model: "gpt-image-1",
-    prompt,
-    size,
-  });
-  const base64 = response?.data?.[0]?.b64_json ?? "";
-  return Buffer.from(base64, "base64");
+async function getOpenRouterApiKey(userId?: string): Promise<string | null> {
+  // Try user specific token first
+  if (userId) {
+    const settings = await storage.getUserSettings(userId);
+    if (settings?.openrouterToken) {
+      return settings.openrouterToken;
+    }
+  }
+  // Fallback to environment variable
+  return process.env.OPENROUTER_API_KEY || null;
 }
 
-/**
- * Edit/combine multiple images into a composite.
- * Uses gpt-image-1 model via Replit AI Integrations.
- */
-export async function editImages(
-  imageFiles: string[],
+export async function generateImageOpenRouter(
   prompt: string,
-  outputPath?: string
-): Promise<Buffer> {
-  const images = await Promise.all(
-    imageFiles.map((file) =>
-      toFile(fs.createReadStream(file), file, {
-        type: "image/png",
-      })
-    )
-  );
-
-  const response = await openai.images.edit({
-    model: "gpt-image-1",
-    image: images,
-    prompt,
-  });
-
-  const imageBase64 = response?.data?.[0]?.b64_json ?? "";
-  const imageBytes = Buffer.from(imageBase64, "base64");
-
-  if (outputPath) {
-    fs.writeFileSync(outputPath, imageBytes);
+  userId?: string
+): Promise<string> {
+  const apiKey = await getOpenRouterApiKey(userId);
+  if (!apiKey) {
+    throw new Error("OpenRouter API key not configured");
   }
 
-  return imageBytes;
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "openai/gpt-4o-mini", // GPT-4o-mini supports image gen on OpenRouter
+      modalities: ["image", "text"],
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`OpenRouter image gen error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  const imageUrl = data.choices?.[0]?.message?.images?.[0];
+  
+  if (!imageUrl) {
+    throw new Error("No image generated in response");
+  }
+
+  return imageUrl;
 }
 
