@@ -160,11 +160,20 @@ export async function registerRoutes(
   });
 
   app.put(api.documents.update.path, async (req, res) => {
-    
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     try {
+      const docId = Number(req.params.id);
+      const document = await storage.getDocument(docId);
+      if (!document) return res.sendStatus(404);
+      
+      const project = await storage.getProject(document.projectId);
+      if (!project || project.ownerId !== userId) return res.sendStatus(403);
+
       const input = api.documents.update.input.parse(req.body);
-      const document = await storage.updateDocument(Number(req.params.id), input);
-      res.json(document);
+      const updated = await storage.updateDocument(docId, input);
+      res.json(updated);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
@@ -174,8 +183,17 @@ export async function registerRoutes(
   });
 
   app.delete(api.documents.delete.path, async (req, res) => {
-    
-    await storage.deleteDocument(Number(req.params.id));
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const docId = Number(req.params.id);
+    const document = await storage.getDocument(docId);
+    if (!document) return res.sendStatus(404);
+
+    const project = await storage.getProject(document.projectId);
+    if (!project || project.ownerId !== userId) return res.sendStatus(403);
+
+    await storage.deleteDocument(docId);
     res.sendStatus(204);
   });
 
@@ -833,7 +851,14 @@ Return only JSON array of IDs by relevance: [1,3,5]`
   });
 
   app.delete("/api/projects/:projectId/budget/line-items/:itemId", async (req, res) => {
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     try {
+      const projectId = Number(req.params.projectId);
+      const project = await storage.getProject(projectId);
+      if (!project || project.ownerId !== userId) return res.sendStatus(403);
+
       await storage.deleteBudgetLineItem(Number(req.params.itemId));
       res.sendStatus(204);
     } catch {
@@ -843,16 +868,30 @@ Return only JSON array of IDs by relevance: [1,3,5]`
 
   // === Locations ===
   app.get(api.locations.list.path, async (req, res) => {
-    const locations = await storage.getLocations(Number(req.params.projectId));
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const projectId = Number(req.params.projectId);
+    const project = await storage.getProject(projectId);
+    if (!project || project.ownerId !== userId) return res.sendStatus(403);
+
+    const locations = await storage.getLocations(projectId);
     res.json(locations);
   });
 
   app.post(api.locations.create.path, async (req, res) => {
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     try {
+      const projectId = Number(req.params.projectId);
+      const project = await storage.getProject(projectId);
+      if (!project || project.ownerId !== userId) return res.sendStatus(403);
+
       const input = api.locations.create.input.parse(req.body);
       const location = await storage.createLocation({
         ...input,
-        projectId: Number(req.params.projectId)
+        projectId
       });
       res.status(201).json(location);
     } catch (err) {
@@ -864,22 +903,52 @@ Return only JSON array of IDs by relevance: [1,3,5]`
   });
 
   app.delete(api.locations.delete.path, async (req, res) => {
-    await storage.deleteLocation(Number(req.params.id));
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const locationId = Number(req.params.id);
+    const location = await storage.getLocation(locationId);
+    if (!location) return res.sendStatus(404);
+
+    const project = await storage.getProject(location.projectId);
+    if (!project || project.ownerId !== userId) return res.sendStatus(403);
+
+    await storage.deleteLocation(locationId);
     res.sendStatus(204);
   });
 
   // === Location Gallery ===
   app.get(api.locationGallery.list.path, async (req, res) => {
-    const gallery = await storage.getLocationGallery(Number(req.params.locationId));
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const locationId = Number(req.params.locationId);
+    const location = await storage.getLocation(locationId);
+    if (!location) return res.sendStatus(404);
+
+    const project = await storage.getProject(location.projectId);
+    if (!project || project.ownerId !== userId) return res.sendStatus(403);
+
+    const gallery = await storage.getLocationGallery(locationId);
     res.json(gallery);
   });
 
   app.post(api.locationGallery.addImage.path, async (req, res) => {
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     try {
+      const locationId = Number(req.params.locationId);
+      const location = await storage.getLocation(locationId);
+      if (!location) return res.status(404).json({ error: "Location not found" });
+
+      const project = await storage.getProject(location.projectId);
+      if (!project || project.ownerId !== userId) return res.sendStatus(403);
+
       const input = api.locationGallery.addImage.input.parse(req.body);
       const image = await storage.addGalleryImage({
         ...input,
-        locationId: Number(req.params.locationId)
+        locationId
       });
       res.status(201).json(image);
     } catch (err) {
