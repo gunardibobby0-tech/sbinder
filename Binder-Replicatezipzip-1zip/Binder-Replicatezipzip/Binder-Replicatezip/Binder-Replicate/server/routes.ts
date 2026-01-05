@@ -38,6 +38,8 @@ export async function registerRoutes(
   });
 
   app.get(api.settings.models.path, async (req, res) => {
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
     try {
       const models = await fetchOpenRouterModels();
       res.json(models);
@@ -113,10 +115,18 @@ export async function registerRoutes(
   });
 
   app.put(api.projects.update.path, async (req, res) => {
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     try {
+      const projectId = Number(req.params.id);
+      const project = await storage.getProject(projectId);
+      if (!project) return res.sendStatus(404);
+      if (project.ownerId !== userId) return res.sendStatus(403);
+
       const input = api.projects.update.input.parse(req.body);
-      const project = await storage.updateProject(Number(req.params.id), input);
-      res.json(project);
+      const updated = await storage.updateProject(projectId, input);
+      res.json(updated);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
@@ -126,22 +136,44 @@ export async function registerRoutes(
   });
 
   app.delete(api.projects.delete.path, async (req, res) => {
-    await storage.deleteProject(Number(req.params.id));
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const projectId = Number(req.params.id);
+    const project = await storage.getProject(projectId);
+    if (!project) return res.sendStatus(404);
+    if (project.ownerId !== userId) return res.sendStatus(403);
+
+    await storage.deleteProject(projectId);
     res.sendStatus(204);
   });
 
   // === Documents ===
   app.get(api.documents.list.path, async (req, res) => {
-    const documents = await storage.getDocuments(Number(req.params.projectId));
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const projectId = Number(req.params.projectId);
+    const project = await storage.getProject(projectId);
+    if (!project || project.ownerId !== userId) return res.sendStatus(403);
+
+    const documents = await storage.getDocuments(projectId);
     res.json(documents);
   });
 
   app.post(api.documents.create.path, async (req, res) => {
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     try {
+      const projectId = Number(req.params.projectId);
+      const project = await storage.getProject(projectId);
+      if (!project || project.ownerId !== userId) return res.sendStatus(403);
+
       const input = api.documents.create.input.parse(req.body);
       const document = await storage.createDocument({
         ...input,
-        projectId: Number(req.params.projectId)
+        projectId
       });
       res.status(201).json(document);
     } catch (err) {
@@ -153,9 +185,15 @@ export async function registerRoutes(
   });
 
   app.get(api.documents.get.path, async (req, res) => {
-    
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     const document = await storage.getDocument(Number(req.params.id));
     if (!document) return res.sendStatus(404);
+
+    const project = await storage.getProject(document.projectId);
+    if (!project || project.ownerId !== userId) return res.sendStatus(403);
+
     res.json(document);
   });
 
