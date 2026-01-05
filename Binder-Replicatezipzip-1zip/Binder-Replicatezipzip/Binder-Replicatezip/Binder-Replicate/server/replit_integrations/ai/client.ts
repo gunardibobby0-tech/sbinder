@@ -142,64 +142,59 @@ export async function extractScriptData(
 }> {
   const isFreeTier = !isPremiumModel(model);
   
-  const freePrompt = `Analyze this script and extract JSON data. IMPORTANT: Respond with ONLY valid JSON, no markdown formatting, no extra text.
+  const freePrompt = `Analyze the provided script and extract key production data into a strictly valid JSON format.
 
-SCRIPT:
-${documentContent.substring(0, 1500)}
+SCRIPT EXCERPT:
+${documentContent.substring(0, 1800)}
 
-RETURN THIS JSON (ONLY):
+Return ONLY a JSON object with this exact structure:
 {
-  "scriptContent": "Brief summary of script",
-  "cast": [{"name": "Character name", "role": "Description"}],
-  "crew": [{"name": "Director", "role": "Oversight", "department": "Direction"}, {"name": "Cinematographer", "role": "Camera", "department": "Camera"}],
-  "schedule": [{"title": "Day 1", "description": "Shoot", "duration": 480}]
+  "scriptContent": "1-sentence summary",
+  "cast": [{"name": "Character Name", "role": "Character description"}],
+  "crew": [{"name": "Job Title", "role": "Key responsibility", "department": "Dept"}],
+  "schedule": [{"title": "Scene/Day Title", "description": "Action summary", "duration": 480}]
 }
 
-RULES:
-- Extract character names from script to cast array
-- Suggest 5-8 crew positions (Director, DP, Sound, Gaffer, etc.)
-- Return ONLY the JSON object, no markdown, no code blocks
-- If JSON is incomplete, close all brackets properly
-- duration = minutes (480 = 8 hour day)`;
+EXTRACTION RULES:
+1. Extract main characters with character descriptions from the text.
+2. Suggest 4-6 essential crew members (Director, Camera, Sound, Production).
+3. Create a 2-3 day shooting schedule (480 mins/day).
+4. OUTPUT ONLY RAW JSON. No markdown, no "json" code blocks, no preamble.
+5. Ensure all quotes and brackets are properly balanced.`;
 
-  const premiumPrompt = `You are an expert film production manager and script analyst. Analyze the script below and extract a comprehensive JSON data structure for production planning.
+  const premiumPrompt = `You are an expert Production Manager. Perform a detailed script breakdown for the following script and generate a comprehensive production-ready JSON structure.
 
-SCRIPT CONTENT:
-${documentContent.substring(0, 2000)}
+SCRIPT DATA:
+${documentContent.substring(0, 3000)}
 
-${dateRange ? `PRODUCTION SCHEDULE: ${dateRange.startDate} to ${dateRange.endDate}` : ''}
-${daysOfWeek && daysOfWeek.length > 0 ? `PRODUCTION DAYS: ${daysOfWeek.join(', ')}` : ''}
+${dateRange ? `PLANNED PRODUCTION DATES: ${dateRange.startDate} to ${dateRange.endDate}` : ''}
+${daysOfWeek && daysOfWeek.length > 0 ? `WORKING DAYS: ${daysOfWeek.join(', ')}` : ''}
 
-Return ONLY valid JSON (no markdown, no code blocks, no explanations):
+REQUIRED JSON STRUCTURE:
 {
-  "scriptContent": "2-3 sentence script summary including genre, tone, and main premise",
+  "scriptContent": "Professional summary (genre, tone, logline)",
   "cast": [
-    {"name": "Character name", "role": "Brief character description and arc"},
-    {"name": "Another character", "role": "Their role in the story"}
+    {"name": "Character Name", "role": "Full personality/role profile"}
   ],
   "crew": [
-    {"name": "Director", "role": "Vision and creative direction of the production", "department": "Direction"},
-    {"name": "Director of Photography", "role": "Camera work and visual aesthetics", "department": "Camera"},
-    {"name": "Production Designer", "role": "Sets, locations, and visual world", "department": "Art"},
-    {"name": "Costume Designer", "role": "Character costumes and wardrobe", "department": "Costume"},
-    {"name": "Sound Designer", "role": "Audio design and sound effects", "department": "Sound"},
-    {"name": "Gaffer", "role": "Lighting setup and electrical", "department": "Lighting"},
-    {"name": "1st Assistant Director", "role": "Crew coordination and schedule management", "department": "Production"},
-    {"name": "Line Producer", "role": "Budget oversight and resource allocation", "department": "Production"}
+    {"name": "Director", "role": "Vision & execution", "department": "Direction"},
+    {"name": "DP", "role": "Visual language & lighting", "department": "Camera"},
+    {"name": "Production Designer", "role": "Artistic world-building", "department": "Art"},
+    {"name": "Sound Recordist", "role": "Field audio & dialogue capture", "department": "Sound"},
+    {"name": "1st AD", "role": "Operations & safety", "department": "Production"},
+    {"name": "Gaffer", "role": "Electrical & lighting", "department": "Camera/Grip"}
   ],
   "schedule": [
-    {"title": "Shoot Day 1", "description": "Primary location setup, character introductions", "duration": 480},
-    {"title": "Shoot Day 2", "description": "Main action sequences and climactic scenes", "duration": 480}
+    {"title": "Day 1: [Key Scenes]", "description": "Detailed logistical plan for the day", "duration": 480}
   ]
 }
 
-EXTRACTION GUIDELINES:
-- Extract ALL named characters and their key roles in the story
-- Suggest 7-10 essential crew positions based on production scale and requirements
-- Create 3-5 shooting days, each 8 hours (480 min), with specific scene descriptions
-- For crew: include realistic department assignments based on script requirements
-- Ensure all JSON is properly closed with matching brackets
-- Return ONLY the JSON object, nothing else`;
+DETAILED GUIDELINES:
+- BREAKDOWN: Identify all speaking characters and their importance.
+- CREW: Suggest 8-12 specialized crew roles based on the script's technical needs (e.g., if there's heavy makeup mentioned, add a MUA).
+- LOGISTICS: Create a realistic shooting schedule spanning 4-7 days.
+- FORMAT: RETURN ONLY VALID JSON. No markdown backticks. No conversational text.
+- INTEGRITY: Ensure the JSON is syntactically perfect even if the content is long.`;
 
   const prompt = isFreeTier ? freePrompt : premiumPrompt;
 
