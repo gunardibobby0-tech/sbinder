@@ -1,3 +1,5 @@
+import { storage } from "../../storage";
+
 export interface OpenRouterMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
