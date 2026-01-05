@@ -92,7 +92,7 @@ export function AutoSuggestDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2 border-white/10">
           <Sparkles className="w-4 h-4" />
-          {t('script.auto_suggest', language)}
+          Auto-Suggest
         </Button>
       </DialogTrigger>
       <DialogContent className="bg-[#1c2128] border-white/10 max-w-2xl">
