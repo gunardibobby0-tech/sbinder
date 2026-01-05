@@ -20,9 +20,6 @@ export default function ScriptView({ projectId }: { projectId: number }) {
   const [content, setContent] = useState("");
   const [isDirty, setIsDirty] = useState(false);
 
-  const handleAutoSuggest = () => {
-    startTracking(`/api/projects/${projectId}/auto-suggest/stream`);
-  };
 
   // Initialize with first script or empty state
   useEffect(() => {
@@ -98,20 +95,6 @@ export default function ScriptView({ projectId }: { projectId: number }) {
           {activeDocId && <ScriptGenerator docId={activeDocId} onSuccess={() => window.location.reload()} />}
           {activeDocId && content && (
             <div className="flex items-center gap-2">
-              <Button 
-                onClick={handleAutoSuggest} 
-                disabled={progress.status === "running"}
-                variant="outline"
-                size="sm"
-                className="bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary"
-              >
-                {progress.status === "running" ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <Loader2 className="w-4 h-4 mr-2" />
-                )}
-                {progress.status === "running" ? "Analyzing..." : "Auto-Suggest"}
-              </Button>
               <AutoSuggestDialog projectId={projectId} scriptContent={content} onSuccess={() => window.location.reload()} />
             </div>
           )}
@@ -127,25 +110,6 @@ export default function ScriptView({ projectId }: { projectId: number }) {
         </div>
       </div>
 
-      {progress.status === "running" && (
-        <div className="px-8 py-4 bg-black/40 border-b border-white/5 animate-in">
-          <div className="flex justify-between text-xs mb-2">
-            <span className="text-muted-foreground flex items-center gap-2">
-              <Loader2 className="w-3 h-3 animate-spin text-primary" />
-              AI is analyzing your script...
-            </span>
-            <span className="text-primary font-bold">
-              {progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0}%
-            </span>
-          </div>
-          <Progress value={progress.total > 0 ? (progress.current / progress.total) * 100 : 0} className="h-1 bg-white/5" />
-          {progress.lastItem && (
-            <p className="text-[10px] text-muted-foreground mt-2 italic animate-pulse">
-              Current task: {progress.lastItem.status || "Analyzing content..."}
-            </p>
-          )}
-        </div>
-      )}
       
       <div className="flex-1 p-8 md:p-12 overflow-y-auto bg-[#e8e8e8] text-black">
         <Textarea
