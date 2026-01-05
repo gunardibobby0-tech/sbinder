@@ -1,12 +1,11 @@
 import type { Express, Request, Response } from "express";
 import { generateImageOpenRouter } from "./client";
-import { extractUserId } from "../../auth";
 
 export function registerImageRoutes(app: Express): void {
   app.post("/api/generate-image", async (req: Request, res: Response) => {
     try {
       const { prompt } = req.body;
-      const userId = extractUserId(req);
+      const userId = (req as any).user?.id;
 
       if (!prompt) {
         return res.status(400).json({ error: "Prompt is required" });
