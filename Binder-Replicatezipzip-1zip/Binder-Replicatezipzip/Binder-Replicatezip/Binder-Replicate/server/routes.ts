@@ -1000,12 +1000,49 @@ Return only JSON array of IDs by relevance: [1,3,5]`
     }
   });
 
+  // === Progress Streaming for Auto-Suggest ===
+  app.get("/api/projects/:projectId/auto-suggest/stream", async (req, res) => {
+    const projectId = Number(req.params.projectId);
+    const userId = extractUserId(req);
+    if (!userId) return res.status(401).end();
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    const sendEvent = (data: any) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    try {
+      // This is a placeholder for actual background processing
+      // In a real app, you'd trigger a job and this would subscribe to its updates
+      sendEvent({ type: "started", total: 3 });
+      
+      // Mock progress
+      setTimeout(() => sendEvent({ type: "progress", index: 0, status: "Extracting Cast" }), 1000);
+      setTimeout(() => sendEvent({ type: "progress", index: 1, status: "Extracting Crew" }), 2000);
+      setTimeout(() => sendEvent({ type: "progress", index: 2, status: "Building Schedule" }), 3000);
+      setTimeout(() => {
+        sendEvent({ type: "complete", results: [] });
+        res.end();
+      }, 4000);
+      
+    } catch (err) {
+      sendEvent({ type: "error", message: "Stream failed" });
+      res.end();
+    }
+  });
+
   // === Shot List ===
   app.get("/api/projects/:projectId/shot-list", async (req, res) => {
     try {
       const shots = await storage.getShotList(Number(req.params.projectId));
       res.json(shots);
     } catch (err) {
+      res.status(500).json({ error: "Failed to fetch shot list" });
+    }
+  });
       res.status(500).json({ error: "Failed to fetch shot list" });
     }
   });
