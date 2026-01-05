@@ -28,10 +28,9 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd Binder-Replicatezipzip-1zip/Binder-Replicatezipzip/Binder-Replicatezip/Binder-Replicate && npm run dev -- --host 0.0.0.0 --port 5000"
+args = "npm run dev"
 waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-exposeLocalhost = true
