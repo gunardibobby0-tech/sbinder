@@ -191,4 +191,4 @@ export async function generateCallSheetPDF(data: CallSheetData): Promise<Buffer>
 
     doc.end();
   });
-});
+}
