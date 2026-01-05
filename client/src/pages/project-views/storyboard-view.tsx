@@ -8,6 +8,11 @@ import { Loader2, Plus, Trash2, Images, Wand2 } from "lucide-react";
 import { useState } from "react";
 import type { Storyboard, StoryboardImage } from "@/hooks/use-storyboards";
 
+function StoryboardImageCount({ boardId }: { boardId: number }) {
+  const { data: images } = useStoryboardImages(boardId);
+  return <>( {images?.length || 0} images )</>;
+}
+
 export default function StoryboardView({ projectId }: { projectId: number }) {
   const { data: storyboards = [], isLoading } = useStoryboards(projectId);
   const createStoryboard = useCreateStoryboard();
@@ -199,7 +204,7 @@ export default function StoryboardView({ projectId }: { projectId: number }) {
                 onClick={() => setSelectedStoryboard(board)}
                 className="w-full text-left px-4 py-3 bg-black/20 border border-white/10 rounded-lg text-sm font-medium text-primary hover:bg-black/30 transition-colors"
               >
-                View Gallery ({useStoryboardImages(board.id).data?.length || 0} images)
+                View Gallery <StoryboardImageCount boardId={board.id} />
               </button>
             </div>
           </Card>
