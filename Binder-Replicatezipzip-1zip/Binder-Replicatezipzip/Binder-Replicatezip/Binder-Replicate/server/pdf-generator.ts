@@ -19,6 +19,7 @@ export async function generateCallSheetPDF(data: CallSheetData): Promise<Buffer>
     const doc = new PDFDocument({
       bufferPages: true,
       margin: 40,
+      size: 'A4'
     });
 
     const buffers: Buffer[] = [];
@@ -33,156 +34,161 @@ export async function generateCallSheetPDF(data: CallSheetData): Promise<Buffer>
 
     doc.on("error", reject);
 
-    // Header
+    // Styling constants
+    const colors = {
+      primary: "#1a1a1a",
+      secondary: "#4a4a4a",
+      accent: "#e5e7eb",
+      border: "#cccccc",
+      rowEven: "#ffffff",
+      rowOdd: "#f9fafb"
+    };
+
+    // Helper: Draw Table Header
+    const drawTableHeader = (y: number, columns: { label: string; x: number; width: number }[]) => {
+      doc.rect(40, y, doc.page.width - 80, 20).fill(colors.accent);
+      doc.fillColor(colors.primary).font("Helvetica-Bold").fontSize(9);
+      columns.forEach(col => {
+        doc.text(col.label, col.x, y + 6, { width: col.width, align: "left" });
+      });
+      return y + 20;
+    };
+
+    // Helper: Draw Row
+    const drawTableRow = (y: number, values: string[], columns: { x: number; width: number }[], isOdd: boolean) => {
+      const rowHeight = 18;
+      if (isOdd) {
+        doc.rect(40, y, doc.page.width - 80, rowHeight).fill(colors.rowOdd);
+      }
+      doc.fillColor(colors.secondary).font("Helvetica").fontSize(8);
+      values.forEach((val, i) => {
+        doc.text(val || "", columns[i].x, y + 5, { width: columns[i].width, align: "left" });
+      });
+      return y + rowHeight;
+    };
+
+    // Header Branding
     doc
       .fontSize(24)
       .font("Helvetica-Bold")
-      .text("CALL SHEET", { align: "center" });
+      .fillColor(colors.primary)
+      .text("CALL SHEET", { align: "right" });
 
-    doc.moveDown(0.5);
     doc
       .fontSize(10)
       .font("Helvetica")
-      .text(`Generated: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, {
-        align: "center",
-      });
+      .fillColor(colors.secondary)
+      .text(`PRODUCTION ID: #${data.eventDetails.projectId}`, 40, 40);
 
-    doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke("#cccccc");
+    doc.moveDown(0.5);
+    doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke(colors.border);
     doc.moveDown(1);
 
-    // Event Information Section
-    doc
-      .fontSize(12)
-      .font("Helvetica-Bold")
-      .text("EVENT INFORMATION", { underline: true });
-    doc.moveDown(0.3);
-
+    // Event Info Grid
+    const startY = doc.y;
     const eventStartDate = new Date(data.eventDetails.startTime);
     const eventEndDate = new Date(data.eventDetails.endTime);
 
+    // Left Column
+    doc.fontSize(14).font("Helvetica-Bold").text(data.eventDetails.title, 40, startY);
+    doc.fontSize(10).font("Helvetica").text(data.eventDetails.description || "No description provided", 40, doc.y + 5, { width: 250 });
+
+    // Right Column Info Box
+    const infoX = 350;
+    let infoY = startY;
+    
     const infoRows = [
-      ["Title:", data.eventDetails.title],
-      ["Type:", data.eventDetails.type],
-      ["Date:", eventStartDate.toLocaleDateString("en-US", { 
-        weekday: "long", 
-        year: "numeric", 
-        month: "long", 
-        day: "numeric" 
-      })],
-      ["Call Time:", eventStartDate.toLocaleTimeString("en-US", { 
-        hour: "2-digit", 
-        minute: "2-digit" 
-      })],
-      ["Estimated Wrap:", eventEndDate.toLocaleTimeString("en-US", { 
-        hour: "2-digit", 
-        minute: "2-digit" 
-      })],
-      ["Location:", data.eventDetails.description || "TBD"],
+      ["DATE", eventStartDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })],
+      ["CALL TIME", eventStartDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })],
+      ["WRAP TIME", eventEndDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })],
+      ["TYPE", data.eventDetails.type.toUpperCase()]
     ];
 
-    doc.fontSize(9).font("Helvetica");
     infoRows.forEach(([label, value]) => {
-      doc.text(`${label} ${value || ""}`, { align: "left" });
-      doc.moveDown(0.25);
+      doc.fontSize(8).font("Helvetica-Bold").fillColor(colors.secondary).text(label, infoX, infoY);
+      doc.fontSize(10).font("Helvetica").fillColor(colors.primary).text(value, infoX + 70, infoY);
+      infoY += 15;
     });
 
-    doc.moveDown(0.5);
-    doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke("#cccccc");
-    doc.moveDown(0.8);
+    doc.y = Math.max(doc.y, infoY) + 20;
+    doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke(colors.border);
+    doc.moveDown(1.5);
 
-    // Crew Section
-    doc
-      .fontSize(12)
-      .font("Helvetica-Bold")
-      .text("CREW ASSIGNMENTS", { underline: true });
-    doc.moveDown(0.3);
+    // Crew Section with Professional Grid
+    doc.fontSize(12).font("Helvetica-Bold").text("CREW CONTACT LIST");
+    doc.moveDown(0.5);
 
     if (data.crewMembers && data.crewMembers.length > 0) {
-      doc.fontSize(8).font("Helvetica-Bold");
-      const colX = [40, 150, 270, 380, 480];
-      doc.text("Name", colX[0], doc.y);
-      doc.text("Department", colX[1], doc.y);
-      doc.text("Title", colX[2], doc.y);
-      doc.text("Contact", colX[3], doc.y);
+      const crewCols = [
+        { label: "NAME", x: 45, width: 140 },
+        { label: "DEPARTMENT", x: 190, width: 110 },
+        { label: "POSITION", x: 305, width: 110 },
+        { label: "CONTACT / PHONE", x: 420, width: 130 }
+      ];
 
-      doc.moveDown(0.5);
-      doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke("#e0e0e0");
-      doc.moveDown(0.3);
+      let currentY = drawTableHeader(doc.y, crewCols);
 
-      doc.fontSize(8).font("Helvetica");
-      data.crewMembers.forEach((member, index) => {
-        const memberY = doc.y;
-        doc.text(member.name, colX[0], memberY);
-        doc.text(member.department || "", colX[1], memberY);
-        doc.text(member.title || "", colX[2], memberY);
-        doc.text(member.contact || "N/A", colX[3], memberY);
-        doc.moveDown(0.4);
-
-        // Add page break if needed
-        if (doc.y > doc.page.height - 100) {
+      data.crewMembers.forEach((member, i) => {
+        if (currentY > doc.page.height - 60) {
           doc.addPage();
-          doc.moveDown(0.5);
+          currentY = drawTableHeader(40, crewCols);
         }
+        currentY = drawTableRow(currentY, [
+          member.name,
+          member.department || "General",
+          member.title || "Crew",
+          member.contact || "N/A"
+        ], crewCols, i % 2 === 1);
       });
+      doc.y = currentY + 20;
     } else {
-      doc
-        .fontSize(9)
-        .font("Helvetica")
-        .fillColor("#999999")
-        .text("No crew members assigned to this event.");
-      doc.fillColor("#000000");
+      doc.fontSize(9).font("Helvetica-Oblique").fillColor(colors.secondary).text("No crew assignments found.");
+      doc.moveDown(1);
     }
-
-    doc.moveDown(0.8);
-    doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke("#cccccc");
-    doc.moveDown(0.8);
 
     // Equipment Section
-    doc
-      .fontSize(12)
-      .font("Helvetica-Bold")
-      .text("EQUIPMENT & RESOURCES", { underline: true });
-    doc.moveDown(0.3);
+    if (doc.y > doc.page.height - 150) doc.addPage();
+    
+    doc.fontSize(12).font("Helvetica-Bold").fillColor(colors.primary).text("EQUIPMENT MANIFEST");
+    doc.moveDown(0.5);
 
     if (data.equipmentList && data.equipmentList.length > 0) {
-      doc.fontSize(8).font("Helvetica-Bold");
-      doc.text("Equipment", 40, doc.y);
-      doc.text("Category", 200, doc.y);
-      doc.text("Quantity", 350, doc.y);
+      const eqCols = [
+        { label: "ITEM DESCRIPTION", x: 45, width: 250 },
+        { label: "CATEGORY", x: 300, width: 150 },
+        { label: "QTY", x: 460, width: 50 }
+      ];
 
-      doc.moveDown(0.5);
-      doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke("#e0e0e0");
-      doc.moveDown(0.3);
+      let currentY = drawTableHeader(doc.y, eqCols);
 
-      doc.fontSize(8).font("Helvetica");
-      data.equipmentList.forEach((item) => {
-        doc.text(item.name || "Equipment", 40, doc.y);
-        doc.text(item.category || "", 200, doc.y);
-        doc.text((item.quantity || 1).toString(), 350, doc.y);
-        doc.moveDown(0.4);
+      data.equipmentList.forEach((item, i) => {
+        if (currentY > doc.page.height - 60) {
+          doc.addPage();
+          currentY = drawTableHeader(40, eqCols);
+        }
+        currentY = drawTableRow(currentY, [
+          item.name || "Unnamed Item",
+          item.category || "General",
+          (item.quantity || 1).toString()
+        ], eqCols, i % 2 === 1);
       });
     } else {
-      doc
-        .fontSize(9)
-        .font("Helvetica")
-        .fillColor("#999999")
-        .text("No equipment assigned to this event.");
-      doc.fillColor("#000000");
+      doc.fontSize(9).font("Helvetica-Oblique").fillColor(colors.secondary).text("No equipment reserved for this session.");
     }
 
-    doc.moveDown(1);
-    doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke("#cccccc");
-    doc.moveDown(1);
-
-    // Footer
-    doc
-      .fontSize(8)
-      .font("Helvetica")
-      .fillColor("#666666")
-      .text("This call sheet was generated by Studio Binder Production Management Platform", {
-        align: "center",
-      });
+    // Professional Footer
+    const range = doc.bufferedPageRange();
+    for (let i = range.start; i < range.start + range.count; i++) {
+      doc.switchToPage(i);
+      doc.moveTo(40, doc.page.height - 50).lineTo(doc.page.width - 40, doc.page.height - 50).stroke(colors.border);
+      doc.fontSize(7).fillColor(colors.secondary).text(
+        `STUDIOBINDER PRODUCTION MANAGEMENT | PAGE ${i + 1} OF ${range.count} | GENERATED ON ${new Date().toLocaleDateString()}`,
+        40,
+        doc.page.height - 40,
+        { align: "center" }
+      );
+    }
 
     doc.end();
   });
-}
+});
