@@ -414,8 +414,21 @@ export class DatabaseStorage implements IStorage {
       .orderBy(budgetLineItems.category);
   }
 
+  async recalculateBudgetTotal(projectId: number): Promise<void> {
+    const items = await this.getBudgetLineItems(projectId);
+    const total = items.reduce((sum, item) => {
+      const amount = typeof item.amount === 'string' ? parseFloat(item.amount) : (item.amount || 0);
+      return sum + amount;
+    }, 0);
+
+    await db.update(budgets)
+      .set({ totalAmount: total.toString(), updatedAt: new Date() })
+      .where(eq(budgets.projectId, projectId));
+  }
+
   async createBudgetLineItem(item: InsertBudgetLineItem): Promise<BudgetLineItem> {
     const [newItem] = await db.insert(budgetLineItems).values(item).returning();
+    await this.recalculateBudgetTotal(item.projectId);
     return newItem;
   }
 
@@ -424,11 +437,19 @@ export class DatabaseStorage implements IStorage {
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(budgetLineItems.id, id))
       .returning();
+    
+    if (updated) {
+      await this.recalculateBudgetTotal(updated.projectId);
+    }
     return updated;
   }
 
   async deleteBudgetLineItem(id: number): Promise<void> {
-    await db.delete(budgetLineItems).where(eq(budgetLineItems.id, id));
+    const [item] = await db.select().from(budgetLineItems).where(eq(budgetLineItems.id, id));
+    if (item) {
+      await db.delete(budgetLineItems).where(eq(budgetLineItems.id, id));
+      await this.recalculateBudgetTotal(item.projectId);
+    }
   }
 
   // Shot List
