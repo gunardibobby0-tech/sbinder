@@ -12,7 +12,7 @@ import { CrewManagementDialog } from "@/components/crew-management-dialog";
 import { CrewAvailabilityCalendar } from "@/components/crew-availability-calendar";
 import { CallSheetGenerator } from "@/components/call-sheet-generator";
 import { LocationPicker } from "@/components/location-picker";
-import { Loader2, Calendar, Clock, MapPin, Users, Plus, Trash2 } from "lucide-react";
+import { Loader2, Calendar, Clock, MapPin, Users, Plus, Trash2, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -218,10 +218,25 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                 const eventCrew = eventAssignments
                   .map(assignment => crew?.find(c => c.id === assignment.crewId))
                   .filter(Boolean) as typeof crew;
+
+                const hasConflictInEvent = eventAssignments.some(a => {
+                  const cID = a.crewId;
+                  const otherAssignments = assignments.filter(oa => oa.crewId === cID && oa.eventId !== event.id);
+                  return otherAssignments.some(oa => {
+                    const otherEvent = events.find(e => e.id === oa.eventId);
+                    if (!otherEvent) return false;
+                    const eStart = new Date(otherEvent.startTime);
+                    const eEnd = new Date(otherEvent.endTime);
+                    const currentStart = new Date(event.startTime);
+                    const currentEnd = new Date(event.endTime);
+                    return (eStart < currentEnd && eEnd > currentStart);
+                  });
+                });
+
                 return (
                   <Card 
                     key={event.id} 
-                    className="bg-gradient-to-r from-card to-card/50 border border-white/10 hover:border-primary/50 overflow-hidden"
+                    className={`bg-gradient-to-r from-card to-card/50 border hover:border-primary/50 overflow-hidden ${hasConflictInEvent ? 'border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.1)]' : 'border-white/10'}`}
                   >
                     {/* Date Badge & Title Header */}
                     <div className="flex gap-4 p-6 pb-4">
@@ -247,6 +262,12 @@ export default function ScheduleView({ projectId }: { projectId: number }) {
                             {event.type}
                           </span>
                           <h3 className="text-xl font-bold text-white flex-1">{event.title}</h3>
+                          {hasConflictInEvent && (
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[10px] font-bold uppercase tracking-widest">
+                              <AlertCircle className="w-3.5 h-3.5" />
+                              Conflict Detected
+                            </div>
+                          )}
                         </div>
                         
                         <div className="flex items-center gap-4 text-sm">

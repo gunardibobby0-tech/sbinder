@@ -36,7 +36,7 @@ export function ScheduleDetailDialog({
   
   const { data: masterCrew = [], isLoading: crewLoading } = useCrewMaster();
   const { data: projectCrew = [], isLoading: projectCrewLoading } = useCrew(projectId || 0);
-  const { data: assignments = [], isLoading: assignmentsLoading } = useCrewAssignments(projectId || 0);
+  const { data: allAssignments = [], isLoading: assignmentsLoading } = useCrewAssignments(projectId || 0);
   const { data: allEvents = [] } = useEvents(projectId || 0);
   const { mutate: createProjectCrew } = useCreateCrew();
   const { mutate: assignCrew, isPending: isAssigning } = useCreateCrewAssignment();
@@ -60,7 +60,7 @@ export function ScheduleDetailDialog({
     return Math.round(parseFloat(crewMember.pricing));
   };
 
-  const eventAssignments = assignments.filter(a => a.eventId === event?.id);
+  const eventAssignments = allAssignments.filter(a => a.eventId === event?.id);
 
   if (!event) return null;
 
@@ -246,11 +246,49 @@ export function ScheduleDetailDialog({
                 <div className="space-y-2">
                   {eventAssignments.map((assignment) => {
                     const crewMember = projectCrew.find(c => c.id === assignment.crewId);
+                    const conflictData = crewMember ? allAssignments
+                      .filter(a => a.crewId === crewMember.id && a.eventId !== event.id)
+                      .map(a => allEvents.find(e => e.id === a.eventId))
+                      .filter(Boolean) : [];
+                    
+                    const hasActiveConflict = conflictData.some(e => {
+                      const eStart = new Date(e!.startTime);
+                      const eEnd = new Date(e!.endTime);
+                      const currentStart = new Date(event.startTime);
+                      const currentEnd = new Date(event.endTime);
+                      return (eStart < currentEnd && eEnd > currentStart);
+                    });
+
                     return (
-                      <div key={assignment.id} className="flex items-center justify-between bg-black/20 p-3 rounded border border-white/5">
-                        <div>
-                          <p className="font-medium text-white">{crewMember?.name}</p>
+                      <div key={assignment.id} className={`flex items-center justify-between bg-black/20 p-3 rounded border ${hasActiveConflict ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-white/5'}`}>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-white">{crewMember?.name}</p>
+                            {hasActiveConflict && (
+                              <div className="flex items-center gap-1 text-yellow-400 text-[10px] font-bold uppercase tracking-wider bg-yellow-400/10 px-1.5 py-0.5 rounded border border-yellow-400/20">
+                                <AlertCircle className="w-3 h-3" />
+                                Conflict
+                              </div>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">{crewMember?.title} • {crewMember?.department}</p>
+                          {hasActiveConflict && (
+                            <div className="mt-1 text-[10px] text-yellow-500/70">
+                              Overlaps with: {allAssignments
+                                .filter(a => a.crewId === crewMember?.id && a.eventId !== event.id)
+                                .map(a => allEvents.find(e => e.id === a.eventId))
+                                .filter(e => {
+                                  if (!e) return false;
+                                  const eStart = new Date(e.startTime);
+                                  const eEnd = new Date(e.endTime);
+                                  const currentStart = new Date(event.startTime);
+                                  const currentEnd = new Date(event.endTime);
+                                  return (eStart < currentEnd && eEnd > currentStart);
+                                })
+                                .map(e => e?.title)
+                                .join(", ")}
+                            </div>
+                          )}
                         </div>
                         <Button
                           variant="ghost"
