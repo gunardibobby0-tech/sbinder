@@ -87,9 +87,22 @@ export async function fetchOpenRouterModels(): Promise<Array<{ id: string; name:
 
 export async function callOpenRouter(
   messages: OpenRouterMessage[],
-  model: string = 'meta-llama/llama-3.3-70b-instruct'
+  model: string = 'meta-llama/llama-3.3-70b-instruct',
+  userId?: string
 ): Promise<string> {
-  const apiKey = await getApiKey();
+  let apiKey = await getApiKey().catch(() => null);
+
+  // If userId is provided, try to get their specific token from settings
+  if (userId) {
+    const settings = await storage.getUserSettings(userId);
+    if (settings?.openrouterToken) {
+      apiKey = settings.openrouterToken;
+    }
+  }
+
+  if (!apiKey) {
+    throw new Error('API key not configured. Please set it in Settings or contact administrator.');
+  }
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -133,7 +146,8 @@ export async function extractScriptData(
   documentContent: string,
   model: string = 'meta-llama/llama-3.3-70b-instruct',
   dateRange?: { startDate: string; endDate: string },
-  daysOfWeek?: string[]
+  daysOfWeek?: string[],
+  userId?: string
 ): Promise<{
   scriptContent: string;
   cast: Array<{ name: string; role: string; roleType: "character" | "crew" }>;
@@ -204,7 +218,7 @@ DETAILED GUIDELINES:
         role: 'user',
         content: prompt,
       },
-    ], model);
+    ], model, userId);
 
     // Log response for debugging
     console.log('API Response length:', response?.length || 0);
@@ -302,7 +316,8 @@ DETAILED GUIDELINES:
 export async function generateScript(
   prompt: string,
   model: string = 'meta-llama/llama-3.3-70b-instruct',
-  language: 'en' | 'id' = 'id'
+  language: 'en' | 'id' = 'id',
+  userId?: string
 ): Promise<string> {
   const isFreeTier = !isPremiumModel(model);
   const langInstruction = language === 'id' 
@@ -336,7 +351,7 @@ ${langInstruction}`;
       role: 'user',
       content: prompt,
     },
-  ], model);
+  ], model, userId);
 
   return response;
 }

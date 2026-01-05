@@ -251,7 +251,7 @@ export async function registerRoutes(
       const userSettings = await storage.getUserSettings(userId);
       const model = input.model || userSettings?.preferredModel || "meta-llama/llama-3.3-70b-instruct";
 
-      const extractedData = await extractScriptData(input.content, model);
+      const extractedData = await extractScriptData(input.content, model, undefined, undefined, userId);
 
       const script = await storage.createDocument({
         projectId,
@@ -332,7 +332,7 @@ export async function registerRoutes(
       const model = input.model || userSettings?.preferredModel || "meta-llama/llama-3.3-70b-instruct";
       const language = (req.body.language as 'en' | 'id') || 'id';
 
-      const generatedScript = await generateScript(input.prompt, model, language);
+      const generatedScript = await generateScript(input.prompt, model, language, userId);
 
       const updated = await storage.updateDocument(docId, {
         content: generatedScript,
@@ -370,7 +370,7 @@ export async function registerRoutes(
       const selectedModel = model || userSettings?.preferredModel || "meta-llama/llama-3.3-70b-instruct";
 
       // Extract cast, crew, and schedule from script
-      const suggestions = await extractScriptData(scriptContent, selectedModel, dateRange, daysOfWeek);
+      const suggestions = await extractScriptData(scriptContent, selectedModel, dateRange, daysOfWeek, userId);
 
       // Get existing cast to check for duplicates
       const existingCast = await storage.getCast(projectId);
