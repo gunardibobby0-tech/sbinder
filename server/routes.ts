@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { insertShotListSchema } from "@shared/schema";
 import { z } from "zod";
-import { setupAuth, registerAuthRoutes } from "./auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
 import { registerChatRoutes } from "./replit_integrations/chat";
 import { extractScriptData, generateScript, fetchOpenRouterModels } from "./replit_integrations/ai/client";
 import { generateCallSheetPDF } from "./pdf-generator";
@@ -25,7 +25,7 @@ export async function registerRoutes(
   registerChatRoutes(app);
 
   // === Settings ===
-  app.get(api.settings.get.path, async (req, res) => {
+  app.get(api.settings.get.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -37,7 +37,7 @@ export async function registerRoutes(
     });
   });
 
-  app.get(api.settings.models.path, async (req, res) => {
+  app.get(api.settings.models.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
     try {
@@ -49,7 +49,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.settings.update.path, async (req, res) => {
+  app.put(api.settings.update.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -77,7 +77,7 @@ export async function registerRoutes(
   });
 
   // === Projects ===
-  app.get(api.projects.list.path, async (req, res) => {
+  app.get(api.projects.list.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -86,7 +86,7 @@ export async function registerRoutes(
     res.json(projects);
   });
 
-  app.get(api.projects.get.path, async (req, res) => {
+  app.get(api.projects.get.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -97,7 +97,7 @@ export async function registerRoutes(
     res.json(project);
   });
 
-  app.post(api.projects.create.path, async (req, res) => {
+  app.post(api.projects.create.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.projects.create.input.parse(req.body);
       const userId = extractUserId(req);
@@ -114,7 +114,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.projects.update.path, async (req, res) => {
+  app.put(api.projects.update.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -135,7 +135,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.projects.delete.path, async (req, res) => {
+  app.delete(api.projects.delete.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -149,7 +149,7 @@ export async function registerRoutes(
   });
 
   // === Documents ===
-  app.get(api.documents.list.path, async (req, res) => {
+  app.get(api.documents.list.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -161,7 +161,7 @@ export async function registerRoutes(
     res.json(documents);
   });
 
-  app.post(api.documents.create.path, async (req, res) => {
+  app.post(api.documents.create.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -184,7 +184,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get(api.documents.get.path, async (req, res) => {
+  app.get(api.documents.get.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -197,7 +197,7 @@ export async function registerRoutes(
     res.json(document);
   });
 
-  app.put(api.documents.update.path, async (req, res) => {
+  app.put(api.documents.update.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -220,7 +220,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.documents.delete.path, async (req, res) => {
+  app.delete(api.documents.delete.path, isAuthenticated, async (req, res) => {
     const userId = extractUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -236,7 +236,7 @@ export async function registerRoutes(
   });
 
   // === Document Import ===
-  app.post(api.documents.import.path, async (req, res) => {
+  app.post(api.documents.import.path, isAuthenticated, async (req, res) => {
     
     try {
       const input = api.documents.import.input.parse(req.body);
@@ -245,6 +245,9 @@ export async function registerRoutes(
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
+
+      const project = await storage.getProject(projectId);
+      if (!project || project.ownerId !== userId) return res.sendStatus(403);
 
       const userSettings = await storage.getUserSettings(userId);
       const model = input.model || userSettings?.preferredModel || "meta-llama/llama-3.3-70b-instruct";
@@ -314,7 +317,7 @@ export async function registerRoutes(
   });
 
   // === Document Script Generation ===
-  app.post(api.documents.generate.path, async (req, res) => {
+  app.post(api.documents.generate.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.documents.generate.input.parse(req.body);
       const docId = Number(req.params.id);
@@ -325,6 +328,9 @@ export async function registerRoutes(
 
       const document = await storage.getDocument(docId);
       if (!document) return res.sendStatus(404);
+
+      const project = await storage.getProject(document.projectId);
+      if (!project || project.ownerId !== userId) return res.sendStatus(403);
 
       const userSettings = await storage.getUserSettings(userId);
       const model = input.model || userSettings?.preferredModel || "meta-llama/llama-3.3-70b-instruct";
@@ -350,7 +356,7 @@ export async function registerRoutes(
   });
 
   // === Auto-Suggest Cast and Crew from Script ===
-  app.post("/api/projects/:projectId/auto-suggest", async (req, res) => {
+  app.post("/api/projects/:projectId/auto-suggest", isAuthenticated, async (req, res) => {
     try {
       const { scriptContent, model, dateRange, daysOfWeek } = req.body;
       const projectId = Number(req.params.projectId);
@@ -358,6 +364,9 @@ export async function registerRoutes(
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
+
+      const project = await storage.getProject(projectId);
+      if (!project || project.ownerId !== userId) return res.sendStatus(403);
 
       if (!scriptContent) {
         return res.status(400).json({ message: "scriptContent is required" });
