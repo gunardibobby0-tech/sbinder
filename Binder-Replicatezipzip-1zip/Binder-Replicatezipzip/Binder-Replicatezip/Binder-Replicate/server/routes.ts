@@ -1043,9 +1043,6 @@ Return only JSON array of IDs by relevance: [1,3,5]`
       res.status(500).json({ error: "Failed to fetch shot list" });
     }
   });
-      res.status(500).json({ error: "Failed to fetch shot list" });
-    }
-  });
 
   app.post("/api/projects/:projectId/shot-list", async (req, res) => {
     try {
