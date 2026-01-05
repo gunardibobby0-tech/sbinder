@@ -186,12 +186,12 @@ export default function BudgetView({ projectId }: { projectId: number }) {
 
   const calculateTotals = () => {
     const totalSpent = lineItems.reduce((sum, item) => {
-      const amount = parseInt(item.amount) || 0;
+      const amount = parseFloat(item.amount) || 0;
       return sum + amount;
     }, 0);
 
-    const totalBudget = parseInt(budget?.totalBudget || "0") || 0;
-    const contingency = parseInt(budget?.contingency || "10") / 100;
+    const totalBudget = parseFloat(budget?.totalBudget || "0") || 0;
+    const contingency = parseFloat(budget?.contingency || "10") / 100;
     const budgetWithContingency = totalBudget + totalBudget * contingency;
     const remaining = budgetWithContingency - totalSpent;
     const percentUsed = totalBudget > 0 ? (totalSpent / budgetWithContingency) * 100 : 0;
@@ -255,21 +255,21 @@ export default function BudgetView({ projectId }: { projectId: number }) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20 p-4">
             <p className="text-sm text-muted-foreground mb-1">Total Budget</p>
-            <p className="text-3xl font-bold text-white">${(totalBudget / 1000).toFixed(0)}K</p>
+            <p className="text-3xl font-bold text-white">${totalBudget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </Card>
           <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/20 p-4">
             <p className="text-sm text-muted-foreground mb-1">Contingency (10%)</p>
-            <p className="text-3xl font-bold text-white">${((totalBudget * 0.1) / 1000).toFixed(0)}K</p>
+            <p className="text-3xl font-bold text-white">${(totalBudget * 0.1).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </Card>
           <Card className="bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/20 p-4">
             <p className="text-sm text-muted-foreground mb-1">Spent</p>
-            <p className="text-3xl font-bold text-white">${(totalSpent / 1000).toFixed(0)}K</p>
+            <p className="text-3xl font-bold text-white">${totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             <p className="text-xs text-muted-foreground mt-1">{percentUsed.toFixed(1)}% of total</p>
           </Card>
           <Card className={`bg-gradient-to-br p-4 border ${remaining >= 0 ? "from-green-500/10 to-green-500/5 border-green-500/20" : "from-red-500/10 to-red-500/5 border-red-500/20"}`}>
             <p className="text-sm text-muted-foreground mb-1">Remaining</p>
             <p className={`text-3xl font-bold ${remaining >= 0 ? "text-green-400" : "text-red-400"}`}>
-              ${(remaining / 1000).toFixed(0)}K
+              ${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </Card>
         </div>
@@ -429,7 +429,7 @@ export default function BudgetView({ projectId }: { projectId: number }) {
                   <TableRow key={item.id} className="border-white/5 hover:bg-white/5">
                     <TableCell className="font-medium text-white">{item.category}</TableCell>
                     <TableCell className="text-muted-foreground">{item.description}</TableCell>
-                    <TableCell className="text-right font-medium text-white">${parseInt(item.amount).toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-medium text-white">${parseFloat(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
                         item.status === "actual" ? "bg-green-500/20 text-green-400" :

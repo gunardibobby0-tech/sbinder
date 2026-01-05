@@ -17,7 +17,7 @@ export default function BudgetChart({ lineItems }: BudgetChartProps) {
   // Group items by category
   const categoryData = lineItems.reduce((acc, item) => {
     const existing = acc.find(i => i.category === item.category);
-    const amount = parseInt(item.amount) || 0;
+    const amount = parseFloat(item.amount) || 0;
     
     if (existing) {
       existing.amount += amount;
@@ -64,7 +64,7 @@ export default function BudgetChart({ lineItems }: BudgetChartProps) {
                   style={{
                     background: `linear-gradient(90deg, ${COLORS[idx % COLORS.length]} 0%, ${COLORS[idx % COLORS.length]}cc 100%)`
                   }}
-                  title={`${cat.category}: ${cat.items.length} item(s)\n${cat.items.map(i => `• ${i.description}: $${parseInt(i.amount).toLocaleString()}`).join('\n')}`}
+                  title={`${cat.category}: ${cat.items.length} item(s)\n${cat.items.map(i => `• ${i.description}: $${parseFloat(i.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`).join('\n')}`}
                 >
                   <div className="h-full flex items-center px-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
                     <span className="text-xs text-white font-medium">{((cat.amount / total) * 100).toFixed(1)}%</span>
@@ -87,14 +87,14 @@ export default function BudgetChart({ lineItems }: BudgetChartProps) {
                 key={idx}
                 className="p-3 rounded-lg border-2 hover:shadow-lg transition-all cursor-help"
                 style={{ borderColor: COLORS[idx % COLORS.length] }}
-                title={`${cat.category}\n${cat.items.map(i => `• ${i.description}: $${parseInt(i.amount).toLocaleString()} (${i.status})`).join('\n')}`}
+                title={`${cat.category}\n${cat.items.map(i => `• ${i.description}: $${parseFloat(i.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${i.status})`).join('\n')}`}
               >
                 <div 
                   className="w-full h-1 rounded-full mb-2" 
                   style={{ backgroundColor: COLORS[idx % COLORS.length] }}
                 />
                 <p className="text-sm font-medium text-white">{cat.category}</p>
-                <p className="text-lg font-bold text-white">${(cat.amount / 1000).toFixed(1)}K</p>
+                <p className="text-lg font-bold text-white">${(cat.amount / 1000).toFixed(2)}K</p>
                 <p className="text-xs text-muted-foreground">{pct}% • {cat.items.length} item(s)</p>
               </div>
             );
@@ -120,7 +120,7 @@ export default function BudgetChart({ lineItems }: BudgetChartProps) {
                     <p className="text-xs text-muted-foreground">{cat.items.length} item(s)</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-white font-bold">${cat.amount.toLocaleString()}</p>
+                    <p className="text-white font-bold">${cat.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     <p className="text-xs text-muted-foreground">{pct}% of total</p>
                   </div>
                 </div>
@@ -129,7 +129,7 @@ export default function BudgetChart({ lineItems }: BudgetChartProps) {
                     <div key={i} className="flex justify-between text-muted-foreground">
                       <span>{item.description}</span>
                       <div className="flex gap-2 items-center">
-                        <span className="text-white">${parseInt(item.amount).toLocaleString()}</span>
+                        <span className="text-white">${parseFloat(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         <span className={`px-1.5 py-0.5 rounded ${
                           item.status === "actual" ? "bg-green-500/30 text-green-400" :
                           item.status === "approved" ? "bg-blue-500/30 text-blue-400" :
