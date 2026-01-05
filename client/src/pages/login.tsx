@@ -1,16 +1,62 @@
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Clapperboard } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Login() {
-  const { user, login } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: 'demo@studiobinder.com',
+    password: 'Demo123!@#'
+  });
 
   useEffect(() => {
     if (user) setLocation("/dashboard");
   }, [user, setLocation]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        const loggedInUser = await response.json();
+        
+        // Update the React Query cache with the new user data
+        queryClient.setQueryData(["/api/auth/user"], loggedInUser);
+        
+        // Small delay to ensure state is updated before redirect
+        setTimeout(() => {
+          setLocation('/dashboard');
+        }, 100);
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Login failed');
+      }
+    } catch (error) {
+      alert('Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   return (
     <div className="min-h-screen bg-[#0a0c10] flex flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -33,19 +79,54 @@ export default function Login() {
         <div className="bg-[#1c2128] p-8 rounded-xl border border-white/10 shadow-xl space-y-6">
           <div className="space-y-2">
             <h2 className="text-xl font-bold text-white">Welcome Back</h2>
-            <p className="text-sm text-muted-foreground">Enter to access your projects</p>
+            <p className="text-sm text-muted-foreground">Sign in to access your projects</p>
           </div>
 
-          <Button 
-            onClick={() => login()} 
-            className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
-          >
-            Enter App
-          </Button>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm text-white">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                className="bg-[#2a2f36] border-white/10 text-white placeholder:text-gray-500"
+                placeholder="Enter your email"
+                required
+              />
+            </div>
 
-          <p className="text-xs text-muted-foreground">
-            You're all set. Click to continue to your projects.
-          </p>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm text-white">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                className="bg-[#2a2f36] border-white/10 text-white placeholder:text-gray-500"
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+
+            <Button 
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+            >
+              {isLoading ? 'Signing in...' : 'Sign In'}
+            </Button>
+          </form>
+
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-xs text-muted-foreground mb-2">
+              Demo Account Pre-filled:
+            </p>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>Email: demo@studiobinder.com</p>
+              <p>Password: Demo123!@#</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { 
   users, projects, documents, cast, crewMaster, contacts, events, userSettings, crew, crewAssignments, equipment, equipmentAssignments, budgets, budgetLineItems, shotList, locations, locationGallery, documentVersions, storyboards, storyboardImages,
   type User,
+  type UpsertUser,
   type Project, type InsertProject,
   type Document, type InsertDocument,
   type Cast, type InsertCast,
@@ -149,6 +150,11 @@ export interface IStorage {
   removeProjectMember(projectId: number, memberId: number): Promise<void>;
   updateMemberRole(projectId: number, memberId: number, role: string): Promise<any>;
   getProjectActivity(projectId: number): Promise<any[]>;
+
+  // Authentication
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(userData: Omit<UpsertUser, 'id' | 'createdAt' | 'updatedAt'>): Promise<User>;
+  validateUserCredentials(email: string, password: string): Promise<User | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -699,6 +705,36 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectActivity(projectId: number): Promise<any[]> {
     return [];
+  }
+
+  // Authentication Methods
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(userData: Omit<UpsertUser, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
+    const [newUser] = await db.insert(users).values(userData).returning();
+    return newUser;
+  }
+
+  async validateUserCredentials(email: string, password: string): Promise<User | null> {
+    const user = await this.getUserByEmail(email);
+    if (!user || !user.passwordHash) {
+      return null;
+    }
+
+    // Import here to avoid circular dependency issues
+    const { verifyPassword } = await import('./auth-utils');
+    const isValidPassword = await verifyPassword(password, user.passwordHash);
+    
+    if (!isValidPassword) {
+      return null;
+    }
+
+    // Return user without password hash
+    const { passwordHash, ...userWithoutPassword } = user;
+    return userWithoutPassword as User;
   }
 }
 

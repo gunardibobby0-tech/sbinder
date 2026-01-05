@@ -9,7 +9,8 @@ import {
   insertCrewAssignmentSchema, crewAssignments,
   insertLocationSchema, locations,
   insertLocationGallerySchema,
-  insertDocumentVersionSchema
+  insertDocumentVersionSchema,
+  users
 } from './schema';
 
 // ============================================
@@ -406,6 +407,53 @@ export const api = {
       responses: {
         200: z.custom<typeof documents.$inferSelect>(),
         404: errorSchemas.notFound,
+      },
+    },
+  },
+
+  // Authentication
+  auth: {
+    register: {
+      method: 'POST' as const,
+      path: '/api/auth/register',
+      input: z.object({
+        email: z.string().email(),
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        password: z.string().min(8),
+      }),
+      responses: {
+        201: z.custom<typeof users.$inferSelect>(),
+        400: errorSchemas.validation,
+        409: z.object({ message: z.string('Email already exists') }),
+      },
+    },
+    login: {
+      method: 'POST' as const,
+      path: '/api/auth/login',
+      input: z.object({
+        email: z.string().email(),
+        password: z.string(),
+      }),
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        401: z.object({ message: z.string('Invalid credentials') }),
+        400: errorSchemas.validation,
+      },
+    },
+    logout: {
+      method: 'POST' as const,
+      path: '/api/auth/logout',
+      responses: {
+        200: z.object({ success: z.boolean() }),
+      },
+    },
+    user: {
+      method: 'GET' as const,
+      path: '/api/auth/user',
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        401: z.object({ message: z.string('Unauthorized') }),
       },
     },
   },

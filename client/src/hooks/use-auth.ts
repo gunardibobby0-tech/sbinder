@@ -2,42 +2,46 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 import { useState } from "react";
 
-const MOCK_USER: User = {
-  id: "user_1",
-  email: "user@studiobinder.local",
-  firstName: "Studio",
-  lastName: "User",
-  profileImageUrl: undefined,
-};
-
 async function fetchUser(): Promise<User | null> {
-  return MOCK_USER;
-}
-
-async function login(): Promise<User> {
-  return MOCK_USER;
+  try {
+    const response = await fetch('/api/auth/user', {
+      credentials: 'include'
+    });
+    
+    if (response.ok) {
+      return await response.json();
+    } else if (response.status === 401) {
+      return null;
+    } else {
+      throw new Error('Failed to fetch user');
+    }
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    return null;
+  }
 }
 
 async function logout(): Promise<void> {
-  // No-op for mock auth
+  const response = await fetch('/api/auth/logout', {
+    method: 'POST',
+    credentials: 'include'
+  });
+  
+  if (!response.ok) {
+    throw new Error('Logout failed');
+  }
 }
 
 export function useAuth() {
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   
-  const { data: user, isLoading } = useQuery<User | null>({
+  const { data: user, isLoading, error } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
     retry: false,
-    staleTime: Infinity,
-  });
-
-  const loginMutation = useMutation({
-    mutationFn: login,
-    onSuccess: (user) => {
-      queryClient.setQueryData(["/api/auth/user"], user);
-    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: true,
   });
 
   const logoutMutation = useMutation({
@@ -46,14 +50,24 @@ export function useAuth() {
       queryClient.setQueryData(["/api/auth/user"], null);
       setIsLoggingOut(false);
     },
+    onError: (error) => {
+      console.error('Logout error:', error);
+      setIsLoggingOut(false);
+    }
   });
+
+  const handleLogout = () => {
+    setIsLoggingOut(true);
+    logoutMutation.mutate();
+  };
 
   return {
     user,
     isLoading,
+    error,
     isAuthenticated: !!user,
-    login: loginMutation.mutate,
-    logout: logoutMutation.mutate,
+    login: () => {}, // Login is handled directly in login page
+    logout: handleLogout,
     isLoggingOut: isLoggingOut || logoutMutation.isPending,
   };
 }
